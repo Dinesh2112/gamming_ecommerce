@@ -48,9 +48,7 @@ const addProduct = async (req, res) => {
         price: parseFloat(price),
         imageUrl,
         stock: parseInt(stock) || 0,
-        category: {
-          connect: { id: categoryObj.id }
-        },
+        categoryId: categoryObj.id,
         brand: 'Generic', // Default brand
         additionalSpecs: additionalSpecs,
         tags: tags
@@ -79,7 +77,7 @@ const getProducts = async (req, res) => {
       name: product.name,
       description: product.description,
       price: product.price,
-      imageUrl: product.imageUrl || 'https://placehold.co/300x200/333/FFF?text=No+Image',
+      imageUrl: product.imageUrl || 'https://via.placeholder.com/300',
       category: product.category.name,
       stock: product.stock,
       specifications: product.additionalSpecs || {},
@@ -117,7 +115,7 @@ const getProductById = async (req, res) => {
       name: product.name,
       description: product.description,
       price: product.price,
-      imageUrl: product.imageUrl || 'https://placehold.co/300x200/333/FFF?text=No+Image',
+      imageUrl: product.imageUrl || 'https://via.placeholder.com/300',
       category: product.category.name,
       stock: product.stock,
       specifications: product.additionalSpecs || {},

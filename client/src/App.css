@@ -1,0 +1,223 @@
+:root {
+  /* Cyberpunk Home Theme */
+  --home-bg-main: linear-gradient(135deg, #0f0f23, #1a1a3a);
+  --home-bg-card: rgba(15, 15, 35, 0.7);
+  --home-text: #ffffff;
+  --home-text-muted: rgba(255, 255, 255, 0.7);
+  --home-primary: #0effff;
+  --home-secondary: #f50ced;
+  --home-accent: rgba(14, 255, 255, 0.3);
+  --home-border: rgba(14, 255, 255, 0.3);
+  
+  /* Dark Product Details Theme */
+  --product-bg-main: #121212;
+  --product-bg-card: #1e1e1e;
+  --product-bg-elevated: #252525;
+  --product-text: #e0e0e0;
+  --product-text-muted: #bbbbbb;
+  --product-border: #444444;
+  --product-primary: #0d6efd;
+  --product-primary-light: rgba(13, 110, 253, 0.1);
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove default styling from the Vite template */
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.logo {
+  display: none;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex-grow: 1;
+  margin-top: 60px; /* Space for fixed navbar */
+  margin-bottom: 40px;
+}
+
+/* Footer Styles */
+.footer {
+  background-color: #0f0f23;
+  border-top: 1px solid rgba(14, 255, 255, 0.2);
+  padding: 1.5rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #0effff, #f50ced, transparent);
+}
+
+.footer .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.copyright {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.footer-link {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  text-decoration: none;
+  position: relative;
+}
+
+.footer-link:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 1px;
+  bottom: -3px;
+  left: 0;
+  background: linear-gradient(90deg, #0effff, #f50ced);
+  transition: width 0.3s ease;
+}
+
+.footer-link:hover {
+  color: #ffffff;
+}
+
+.footer-link:hover:after {
+  width: 100%;
+}
+
+/* Global Button Styles */
+.primary-button {
+  background: linear-gradient(90deg, #0effff, #f50ced);
+  color: #000;
+  font-weight: 600;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(14, 255, 255, 0.3);
+}
+
+.secondary-button {
+  background-color: transparent;
+  border: 1px solid #0effff;
+  color: #0effff;
+  padding: 0.7rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondary-button:hover {
+  background-color: rgba(14, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(14, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 255, 255, 0);
+  }
+}
+
+@keyframes glowText {
+  0% {
+    text-shadow: 0 0 5px rgba(14, 255, 255, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(14, 255, 255, 0.8);
+  }
+  100% {
+    text-shadow: 0 0 5px rgba(14, 255, 255, 0.5);
+  }
+}
+
+/* Utility Classes */
+.glow {
+  animation: pulse 2s infinite;
+}
+
+.text-glow {
+  animation: glowText 2s infinite;
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #0effff, #f50ced);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Page Transitions */
+.page-enter {
+  opacity: 0;
+}
+
+.page-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+
+.page-exit {
+  opacity: 1;
+}
+
+.page-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .footer .container {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .footer-links {
+    margin-top: 0.5rem;
+  }
+}

@@ -16,11 +16,12 @@ const prisma = new PrismaClient({
 // Make prisma available globally for use in controllers
 global.prisma = prisma;
 
-// CORS configuration - allow correct frontend port (5173)
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
+// Update CORS configuration to allow credentials
+const corsOptions = {
+  origin: "http://localhost:5173", // Allow only your frontend domain
+  credentials: true, // Allow credentials (cookies, authorization headers)
+};
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
@@ -31,9 +32,6 @@ app.use("/api/auth", require("./routes/userRoutes")); // Add the authentication 
 app.use("/api/products", require("./routes/product"));
 app.use("/api/cart", require("./routes/cart"));
 app.use("/api/orders", require("./routes/order"));
-
-// Admin routes
-app.use("/api/admin", require("./routes/adminRoutes"));
 
 // AI Assistant routes
 app.use("/api/ai", require("./routes/aiRoutes"));

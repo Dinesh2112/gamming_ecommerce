@@ -15,19 +15,108 @@ model User {
   role      String     @default("user")
   createdAt DateTime   @default(now())
 
-  cartItems CartItem[] // 👈 Add this
+  cartItems CartItem[] // 👈 already added
+  orders    Order[]    // 👈 add this
+  aiChats   AIChat[]   // Relation to AI chat history
+  addresses Address[]  // User delivery addresses
+}
+
+// Categories for product organization
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  products    Product[]
 }
 
 model Product {
-  id          Int        @id @default(autoincrement())
-  name        String
-  description String
-  price       Float
-  imageUrl    String?
-  category    String
-  createdAt   DateTime   @default(now())
+  id               Int        @id @default(autoincrement())
+  name             String
+  description      String
+  price            Float
+  imageUrl         String?
+  stock            Int        @default(0)
+  categoryId       Int
+  category         Category   @relation(fields: [categoryId], references: [id])
+  brand            String
+  model            String?
+  
+  // Common specifications
+  releaseDate      DateTime?
+  weight           Float?     // In grams
+  dimensions       String?    // Format: "LxWxH" in mm
+  warranty         Int?       // Warranty in months
 
-  cartItems   CartItem[] // 👈 Add this
+  // Performance metrics
+  performanceScore Float?     // Benchmark score if applicable
+  powerConsumption Int?       // In watts
+  
+  // Component-specific attributes (nullable)
+  
+  // For CPUs and GPUs
+  clockSpeed       Float?     // In GHz
+  cores            Int?       // Number of cores
+  threads          Int?       // Number of threads
+  
+  // For GPUs
+  vram             Int?       // VRAM in GB
+  rayTracingSupport Boolean?  // Supports ray tracing
+  
+  // For RAM
+  capacity         Int?       // In GB
+  type             String?    // DDR4, DDR5, etc.
+  speed            Int?       // In MHz
+  
+  // For Storage
+  storageCapacity  Int?       // In GB
+  storageType      String?    // SSD, HDD, NVME
+  readSpeed        Int?       // In MB/s
+  writeSpeed       Int?       // In MB/s
+  
+  // For Monitors
+  screenSize       Float?     // In inches
+  resolution       String?    // e.g., "1920x1080"
+  refreshRate      Int?       // In Hz
+  panelType        String?    // IPS, VA, TN, etc.
+  
+  // For peripherals
+  connectionType   String?    // Wired, Wireless, Bluetooth
+  rgb              Boolean?   // Has RGB lighting
+  
+  // Compatibility info
+  socketType       String?    // For CPUs, motherboards
+  formFactor       String?    // ATX, mATX, etc.
+  
+  // Tags for search and filtering
+  tags             String[]
+  
+  // Additional info in JSON format for flexible storage
+  additionalSpecs  Json?      // Any other specs in JSON format
+  
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
+  compatibleWith   ProductCompatibility[] @relation("PrimaryProduct")
+  compatibleTo     ProductCompatibility[] @relation("SecondaryProduct")
+
+  // Add a unique constraint on name and brand
+  @@unique([name, brand], name: "name_brand")
+}
+
+// Defines compatibility relationships between products
+model ProductCompatibility {
+  id              Int      @id @default(autoincrement())
+  primaryProductId Int     // Product that this entry is for
+  secondaryProductId Int   // Product that is compatible with primary
+  compatibilityType String // Type of compatibility: "required", "optional", "recommended"
+  notes           String?  // Any notes about the compatibility
+  
+  primaryProduct   Product @relation("PrimaryProduct", fields: [primaryProductId], references: [id])
+  secondaryProduct Product @relation("SecondaryProduct", fields: [secondaryProductId], references: [id])
+  
+  @@unique([primaryProductId, secondaryProductId])
 }
 
 model CartItem {
@@ -38,4 +127,85 @@ model CartItem {
   productId Int
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
+}
+
+model Order {
+  id           Int          @id @default(autoincrement())
+  userId       Int
+  addressId    Int?
+  totalAmount  Float
+  status       String       @default("pending") // pending, processing, shipped, delivered, cancelled
+  paymentMethod String?
+  paymentStatus String      @default("pending") // pending, completed, failed
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  user         User         @relation(fields: [userId], references: [id])
+  address      Address?     @relation(fields: [addressId], references: [id])
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  price     Float
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Address {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  name      String  // Recipient name
+  phone     String
+  street    String
+  city      String
+  state     String
+  postalCode String
+  country   String
+  isDefault Boolean @default(false)
+  user      User    @relation(fields: [userId], references: [id])
+  orders    Order[]
+}
+
+// AI Assistant related models
+model AIChat {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  messages    AIMessage[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AIMessage {
+  id         Int      @id @default(autoincrement())
+  chatId     Int
+  chat       AIChat   @relation(fields: [chatId], references: [id])
+  content    String   @db.Text
+  role       String   // "user" or "assistant"
+  timestamp  DateTime @default(now())
+  
+  // References to products mentioned in this message
+  productReferences ProductReference[]
+}
+
+model ProductReference {
+  id        Int       @id @default(autoincrement())
+  messageId Int
+  message   AIMessage @relation(fields: [messageId], references: [id])
+  productId Int
+  // We don't need a direct relation to Product here as we just need the ID
+}
+
+// For storing predefined AI recommendation templates
+model AITemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  systemPrompt String   @db.Text
+  useCase     String   // e.g., "budget_recommendation", "component_selection"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
