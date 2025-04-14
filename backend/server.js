@@ -18,11 +18,17 @@ global.prisma = prisma;
 
 // CORS configuration - allow correct frontend port (5173)
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://0048-183-87-197-87.ngrok-free.app'],
   credentials: true
 }));
 
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Routes
 app.use("/api/auth", require("./routes/userRoutes")); // Add the authentication routes
@@ -38,8 +44,15 @@ app.use("/api/admin", require("./routes/adminRoutes"));
 // AI Assistant routes
 app.use("/api/ai", require("./routes/aiRoutes"));
 
+// Root route
 app.get("/", (req, res) => {
   res.send("API is running... 🚀");
+});
+
+// 404 handler - should come after all other routes
+app.use((req, res, next) => {
+  console.log(`[404] Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
 });
 
 const PORT = process.env.PORT || 5000;

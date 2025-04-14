@@ -1,16 +1,16 @@
 // src/components/Login.jsx
 import React, { useState, useContext } from 'react';
-import axios from '../axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import './Auth.css';
+import { toast } from 'react-hot-toast';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { setUser, fetchUser } = useContext(UserContext);
+  const { login } = useContext(UserContext);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,29 +25,25 @@ const Login = () => {
     
     try {
       console.log('Attempting to login with:', formData.email);
-      const res = await axios.post('/api/auth/login', formData);
+      console.log('Login payload:', formData);
       
-      if (!res.data.token) {
-        setError('Login failed: No token received');
-        console.error('Login failed: No token received from server');
-        return;
+      // Use the login function from UserContext instead of direct API call
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        // Show toast on successful login
+        toast.success('Login successful!');
+        console.log('Login successful, redirecting to home');
+        navigate('/'); // Redirect to home
+      } else {
+        // Handle login failure
+        setError(result.message || 'Login failed. Please try again.');
+        toast.error(result.message || 'Login failed');
       }
-      
-      // Clear any existing tokens first
-      localStorage.removeItem('token');
-      
-      // Store the token in localStorage
-      localStorage.setItem('token', res.data.token);
-      console.log('Token stored successfully');
-      
-      // Use the fetchUser function from context to get user data
-      await fetchUser();
-      
-      console.log('Login successful, redirecting to home');
-      navigate('/'); // Redirect to home or products
     } catch (err) {
-      console.error('Login error:', err.response?.data || err.message);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+      setError('An unexpected error occurred. Please try again.');
+      toast.error('Login failed');
     } finally {
       setLoading(false);
     }

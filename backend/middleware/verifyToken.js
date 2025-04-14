@@ -1,29 +1,42 @@
 const jwt = require("jsonwebtoken");
 
 const verifyToken = (req, res, next) => {
+  // Look for x-auth-token in headers
   const token = req.header("x-auth-token");
+  
+  // Also check Authorization header in case the client is sending it that way
+  const authHeader = req.header("Authorization");
+  const bearerToken = authHeader && authHeader.startsWith('Bearer ') 
+    ? authHeader.slice(7) 
+    : null;
+  
+  // Use the token from x-auth-token header if available, otherwise try Bearer token
+  const finalToken = token || bearerToken;
 
   console.log("============= TOKEN VERIFICATION =============");
   console.log("Request path:", req.path);
   console.log("Request method:", req.method);
-  console.log("Token received:", token ? `Yes (${token.substring(0, 15)}...)` : "No");
-  console.log("Headers:", JSON.stringify(req.headers));
+  console.log("All headers:", JSON.stringify(req.headers));
+  console.log("x-auth-token header:", token ? `${token.substring(0, 15)}...` : "Not found");
+  console.log("Authorization header:", authHeader ? `${authHeader.substring(0, 15)}...` : "Not found");
+  console.log("Final token used:", finalToken ? `${finalToken.substring(0, 15)}...` : "No token available");
 
   // Check if no token is provided
-  if (!token) {
+  if (!finalToken) {
     console.log("No token provided for path:", req.path);
     return res.status(401).json({ message: "No token, authorization denied" });
   }
 
   try {
+    // Use the same JWT secret as in userController.js
+    const jwtSecret = process.env.JWT_SECRET || '8c51647b1f5fb04e8f32efe1b7093d80a86e543fce8f67174c2c8fd0c35f60fe';
+    
     // Log JWT_SECRET value (only first few characters for security)
-    const secretPreview = process.env.JWT_SECRET 
-      ? `${process.env.JWT_SECRET.substring(0, 5)}...` 
-      : 'undefined';
+    const secretPreview = jwtSecret.substring(0, 5) + '...';
     console.log(`Using JWT_SECRET: ${secretPreview}`);
     
     // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(finalToken, jwtSecret);
     console.log("Token verified successfully for user:", JSON.stringify(decoded));
     console.log("User role in token:", decoded.role);
 
@@ -40,7 +53,7 @@ const verifyToken = (req, res, next) => {
     
     // Log more details about the token
     try {
-      const tokenParts = token.split('.');
+      const tokenParts = finalToken.split('.');
       if (tokenParts.length === 3) {
         const header = JSON.parse(Buffer.from(tokenParts[0], 'base64').toString());
         const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
@@ -60,7 +73,7 @@ const verifyToken = (req, res, next) => {
     }
     
     console.log("============= END TOKEN VERIFICATION (FAILED) =============");
-    res.status(400).json({ message: "Token is not valid" });
+    res.status(401).json({ message: "Token is not valid" });
   }
 };
 

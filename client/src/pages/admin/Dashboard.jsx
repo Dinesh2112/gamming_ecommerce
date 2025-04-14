@@ -40,6 +40,11 @@ const Dashboard = () => {
             console.log("Token contains role?", !!tokenPayload.role);
             console.log("Role in token:", tokenPayload.role);
             console.log("Role is ADMIN in token?", tokenPayload.role === 'ADMIN');
+            
+            // Update token with correct role if needed
+            if (tokenPayload.role === 'admin' && user?.role === 'ADMIN') {
+              console.log("Token contains lowercase 'admin' but user has 'ADMIN'. This might cause auth issues.");
+            }
           } catch (error) {
             console.error("Error decoding token:", error);
           }
@@ -55,14 +60,31 @@ const Dashboard = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          const response = await fetch('/api/admin/dashboard-stats', {
-            headers: {
-              'x-auth-token': localStorage.getItem('token')
-            },
-            signal: controller.signal
+          // Use the full URL for the API request
+          const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const url = `${backendUrl}/api/admin/dashboard-stats`;
+          
+          console.log("Fetching from URL:", url);
+          
+          // Create headers with the token
+          const headers = {
+            'Content-Type': 'application/json',
+            'x-auth-token': token
+          };
+          
+          console.log("Request headers:", headers);
+          
+          const response = await fetch(url, {
+            method: 'GET',
+            headers,
+            signal: controller.signal,
+            credentials: 'include' // Include cookies if any
           });
           
           clearTimeout(timeoutId);
+          
+          console.log("Response status:", response.status);
+          console.log("Response headers:", Object.fromEntries([...response.headers]));
 
           // Check if response is JSON
           const contentType = response.headers.get('content-type');

@@ -30,17 +30,25 @@ const Orders = () => {
       }
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        console.log('Orders data:', response.data);
+        // Using axios with interceptor for auth headers and proper error handling
+        console.log('Fetching orders for user:', user.id);
+        
+        const response = await axios.get('/api/orders');
+        console.log('Orders data received:', response.data);
         setOrders(response.data);
         setLoading(false);
+        
       } catch (err) {
         console.error('Error fetching orders:', err);
-        setError(err.response?.data?.message || 'Failed to fetch orders');
+        const errorMessage = err.response?.data?.message || 'Failed to fetch orders';
+        console.error('Error message:', errorMessage);
+        setError(errorMessage);
+        
+        // Also show any additional error information
+        if (err.response?.data?.error) {
+          console.error('Additional error details:', err.response.data.error);
+        }
+        
         setLoading(false);
       }
     };

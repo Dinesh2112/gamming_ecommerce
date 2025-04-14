@@ -707,4 +707,23 @@
 .category-gpus { background-color: #f9fbe7; color: #827717; }
 .category-accessories { background-color: #fff8e1; color: #ff6f00; }
 .category-pc { background-color: #e1f5fe; color: #01579b; }
-.category-components { background-color: #efebe9; color: #3e2723; } 
+.category-components { background-color: #efebe9; color: #3e2723; }
+
+/* Stock level indicators */
+.stock-out {
+  color: #ff3b30;
+  font-weight: bold;
+}
+
+.stock-low {
+  color: #ff9500;
+  font-weight: bold;
+}
+
+.stock-medium {
+  color: #34c759;
+}
+
+.stock-high {
+  color: #007aff;
+} 

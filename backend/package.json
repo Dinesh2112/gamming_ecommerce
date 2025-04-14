@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.14.1",
     "prisma": "^6.6.0",
-    "prompt-sync": "^4.2.0"
+    "prompt-sync": "^4.2.0",
+    "razorpay": "^2.9.6"
   }
 }

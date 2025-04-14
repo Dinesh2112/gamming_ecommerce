@@ -31,4 +31,20 @@ yarn-error.log*
 *.swo
 
 # database
-*.sqlite 
+*.sqlite
+
+# Node modules
+node_modules/
+
+# Build files
+/client/dist
+
+# Logs
+logs
+*.log
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo 

@@ -37,10 +37,35 @@ router.get('/me', verifyToken, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
+    // Normalize the admin role to uppercase
+    if (user.role === 'admin') {
+      user.role = 'ADMIN';
+    }
+    
     res.json(user);
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: "Error fetching user", error: error.message });
+  }
+});
+
+// Debug endpoint to check user role from token
+router.get('/check-role', verifyToken, (req, res) => {
+  try {
+    console.log('==== CHECK ROLE ENDPOINT ====');
+    console.log('User from token:', JSON.stringify(req.user));
+    console.log('Role from token:', req.user.role);
+    console.log('Role is ADMIN?', req.user.role === 'ADMIN');
+    
+    res.json({
+      success: true,
+      user: req.user,
+      role: req.user.role,
+      isAdmin: req.user.role === 'ADMIN'
+    });
+  } catch (error) {
+    console.error('Error in check-role endpoint:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

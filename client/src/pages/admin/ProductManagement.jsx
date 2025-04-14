@@ -580,10 +580,18 @@ const ProductManagement = () => {
     });
   };
 
-  // Close modal
+  // Handle closing the modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
     resetForm();
+  };
+
+  // Helper function to determine stock status CSS class
+  const getStockClass = (stock) => {
+    if (stock <= 0) return 'out';
+    if (stock < 10) return 'low';
+    if (stock < 25) return 'medium';
+    return 'high';
   };
 
   // Helper to get specification fields based on category

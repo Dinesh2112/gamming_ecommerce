@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import axios from '../axiosConfig';
 import { UserContext } from '../context/UserContext';
 import '../styles/AIAssistant.css';
+import { Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 
 /**
  * AIAssistant Component
@@ -35,6 +37,7 @@ const AIAssistant = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Initialize chat when component loads
   useEffect(() => {
@@ -145,121 +148,77 @@ const AIAssistant = () => {
     setIsTyping(true);
     
     try {
-      const response = await axios.post('/api/ai/chat/message', {
-        chatId,
-        content: userMessage.content
-      });
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      console.log('Using backend URL:', backendUrl);
+      
+      const response = await axios.post(
+        `${backendUrl}/api/ai/chat/message`,
+        {
+          chatId: chatId,
+          content: userMessage.content
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
       
       // Log the full response for debugging
       console.log('Full API response:', JSON.stringify(response.data, null, 2));
       
-      // Check specifically for product data structure
-      if (response.data.products || response.data.suggestedProducts) {
-        console.log('Raw product data from API:', 
-          response.data.products || response.data.suggestedProducts);
-        
-        // Check the first product's image properties
-        const firstProduct = (response.data.products && response.data.products[0]) || 
-                           (response.data.suggestedProducts && response.data.suggestedProducts[0]);
-        
-        if (firstProduct) {
-          console.log('First product image properties:', {
-            imageUrl: firstProduct.imageUrl,
-            image: firstProduct.image,
-            images: firstProduct.images,
-            hasImageUrl: !!firstProduct.imageUrl,
-            hasImage: !!firstProduct.image,
-            hasImages: !!firstProduct.images,
-          });
+      // Extract product IDs from both the message text and suggestedProducts array
+      const productIdsFromText = (response.data.message.match(/PRODUCT_ID:(\d+)/g) || [])
+        .map(match => match.split(':')[1]);
+      
+      const productIdsFromArray = response.data.suggestedProducts ? 
+        response.data.suggestedProducts.map(product => String(product.id)) : 
+        [];
+      
+      // Combine and deduplicate product IDs
+      const productIds = [...new Set([...productIdsFromText, ...productIdsFromArray])];
+      
+      console.log('Extracted product IDs:', productIds);
+      
+      // Create the assistant message
+      const assistantMessage = {
+        role: 'assistant',
+        content: response.data.message,
+        timestamp: new Date().toISOString(),
+        suggestedProducts: []
+      };
+      
+      // If we found product IDs, fetch those products
+      if (productIds.length > 0) {
+        try {
+          // Deduplicate IDs again before sending request
+          const uniqueIds = [...new Set(productIds)];
+          console.log('Making request to API with unique product IDs:', uniqueIds);
+          
+          // Always use the test endpoint which is guaranteed to work
+          console.log('Using test-suggested endpoint');
+          const testResponse = await fetch(`${backendUrl}/api/products/test-suggested?ids=${uniqueIds.join(',')}`);
+          
+          if (!testResponse.ok) {
+            const errorText = await testResponse.text();
+            console.error('Test API error:', testResponse.status, errorText);
+            throw new Error(`Test API request failed: ${testResponse.status} - ${errorText}`);
+          }
+          
+          const productData = await testResponse.json();
+          console.log('Test API response:', productData);
+          
+          // Format products for display
+          const products = Array.isArray(productData) ? productData : [];
+          assistantMessage.suggestedProducts = products.map(product => enhanceProductData(product)).filter(Boolean);
+          
+          console.log('Enhanced product references:', assistantMessage.suggestedProducts);
+        } catch (productError) {
+          console.error('Error fetching product details:', productError);
         }
       }
       
-      // If session expired, reinitialize
-      if (response.data.status === 'SESSION_EXPIRED') {
-        console.log('Chat session expired, reinitializing...');
-        try {
-          // Initialize a new chat
-          const newChatRes = await axios.post('/api/ai/chat/initialize', {});
-          setChatId(newChatRes.data.chatId);
-          
-          // Try sending the message again
-          const retryResponse = await axios.post('/api/ai/chat/message', {
-            chatId: newChatRes.data.chatId,
-            content: userMessage.content
-          });
-          
-          // Process the retry response
-          const assistantMessage = {
-            role: 'assistant',
-            content: retryResponse.data.message || retryResponse.data.response || retryResponse.data.content,
-            timestamp: new Date().toISOString()
-          };
-          
-          // Process product suggestions if any
-          if (retryResponse.data.suggestedProducts && retryResponse.data.suggestedProducts.length > 0) {
-            console.log('Received product suggestions:', retryResponse.data.suggestedProducts);
-            assistantMessage.suggestedProducts = retryResponse.data.suggestedProducts.map(enhanceProductData);
-          } else if (retryResponse.data.products && retryResponse.data.products.length > 0) {
-            console.log('Received products array:', retryResponse.data.products);
-            assistantMessage.suggestedProducts = retryResponse.data.products.map(enhanceProductData);
-          } else if (retryResponse.data.productReferences && retryResponse.data.productReferences.length > 0) {
-            console.log('Received product references:', retryResponse.data.productReferences);
-            // If we have product references but not full product data
-            const productIds = retryResponse.data.productReferences.map(ref => ref.productId);
-            
-            // Try to find product details in the response data
-            if (retryResponse.data.productDetails && retryResponse.data.productDetails.length > 0) {
-              assistantMessage.suggestedProducts = retryResponse.data.productDetails
-                .filter(product => productIds.includes(product.id))
-                .map(enhanceProductData);
-            } else {
-              // Just use the references as-is if no detailed product data available
-              assistantMessage.suggestedProducts = retryResponse.data.productReferences.map(enhanceProductData);
-            }
-          }
-          
-          setMessages(prev => [...prev, assistantMessage]);
-          
-          // Update chat history
-          const historyRes = await axios.get('/api/ai/chat/history');
-          setChatHistory(historyRes.data.chats || []);
-        } catch (error) {
-          console.error('Error reinitializing chat:', error);
-          setError('Failed to reinitialize chat. Please try again later.');
-        }
-      } else {
-        // Process normal response
-        const assistantMessage = {
-          role: 'assistant',
-          content: response.data.message || response.data.response || response.data.content,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Process product suggestions if any
-        if (response.data.suggestedProducts && response.data.suggestedProducts.length > 0) {
-          console.log('Received product suggestions:', response.data.suggestedProducts);
-          assistantMessage.suggestedProducts = response.data.suggestedProducts.map(enhanceProductData);
-        } else if (response.data.products && response.data.products.length > 0) {
-          console.log('Received products array:', response.data.products);
-          assistantMessage.suggestedProducts = response.data.products.map(enhanceProductData);
-        } else if (response.data.productReferences && response.data.productReferences.length > 0) {
-          console.log('Received product references:', response.data.productReferences);
-          // If we have product references but not full product data
-          const productIds = response.data.productReferences.map(ref => ref.productId);
-          
-          // Try to find product details in the response data
-          if (response.data.productDetails && response.data.productDetails.length > 0) {
-            assistantMessage.suggestedProducts = response.data.productDetails
-              .filter(product => productIds.includes(product.id))
-              .map(enhanceProductData);
-          } else {
-            // Just use the references as-is if no detailed product data available
-            assistantMessage.suggestedProducts = response.data.productReferences.map(enhanceProductData);
-          }
-        }
-        
-        setMessages(prev => [...prev, assistantMessage]);
-      }
+      setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -292,60 +251,45 @@ const AIAssistant = () => {
     }
   };
 
-  // Helper function to enhance product data and ensure it has required fields
+  // Helper function to enhance product data
   const enhanceProductData = (product) => {
-    if (!product) return null;
+    console.log('Enhancing product data:', product);
     
-    // Create a copy to avoid modifying the original
-    const enhancedProduct = { ...product };
-    
-    // Define a base URL for product images
-    const baseUrl = 'http://localhost:5000'; // Adjust this to match your backend URL
-    
-    // Ensure imageUrl is properly set
-    if (!enhancedProduct.imageUrl) {
-      if (enhancedProduct.image) {
-        enhancedProduct.imageUrl = enhancedProduct.image;
-      } else if (enhancedProduct.images && Array.isArray(enhancedProduct.images) && enhancedProduct.images.length > 0) {
-        enhancedProduct.imageUrl = enhancedProduct.images[0];
-      }
+    if (!product) {
+      console.log('No product data provided');
+      return null;
     }
+
+    // Base URL for product images
+    const baseUrl = import.meta.env.VITE_BACKEND_URL;
     
-    // Check if it's a data URL (base64 encoded image)
-    const isDataUrl = enhancedProduct.imageUrl && 
-                     (enhancedProduct.imageUrl.startsWith('data:image') || 
-                      enhancedProduct.imageUrl.includes('base64'));
+    // Ensure we have a valid image URL
+    let imageUrl = product.imageUrl || product.image;
     
-    // For non-data URLs, apply normal path handling
-    if (!isDataUrl) {
-      // Check for empty or placeholder imageUrl
-      if (!enhancedProduct.imageUrl || enhancedProduct.imageUrl === 'placeholder.png') {
-        enhancedProduct.imageUrl = baseUrl + '/images/placeholder.png';
-      }
-      
-      // If the image URL doesn't start with http or /, add the base URL
-      if (enhancedProduct.imageUrl && 
-          !enhancedProduct.imageUrl.startsWith('http') && 
-          !enhancedProduct.imageUrl.startsWith('/')) {
-        enhancedProduct.imageUrl = '/' + enhancedProduct.imageUrl;
-      }
-      
-      // For relative URLs that start with /, add the base URL
-      if (enhancedProduct.imageUrl && enhancedProduct.imageUrl.startsWith('/')) {
-        enhancedProduct.imageUrl = baseUrl + enhancedProduct.imageUrl;
-      }
+    if (!imageUrl) {
+      console.log('No image URL found, using placeholder');
+      imageUrl = 'https://placehold.co/300x200/333/FFF?text=Product';
+    } else if (!imageUrl.startsWith('http')) {
+      // If it's a relative path, prepend the base URL
+      console.log('Converting relative image path to absolute URL');
+      imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
     }
     
     // Ensure price is a number
-    if (typeof enhancedProduct.price !== 'number') {
-      if (typeof enhancedProduct.price === 'string') {
-        enhancedProduct.price = parseFloat(enhancedProduct.price.replace(/[^0-9.]/g, '')) || 0;
-      } else {
-        enhancedProduct.price = 0;
-      }
-    }
+    const price = typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0;
     
-    return enhancedProduct;
+    // Log the final product data
+    console.log('Enhanced product:', {
+      ...product,
+      imageUrl,
+      price
+    });
+    
+    return {
+      ...product,
+      imageUrl,
+      price
+    };
   };
 
   // Render a compact product card for inline display
@@ -354,6 +298,12 @@ const AIAssistant = () => {
       console.error('Invalid product object:', product);
       return null;
     }
+    
+    console.log('Rendering product card:', {
+      productId: product.id,
+      imageUrl: product.imageUrl,
+      name: product.name
+    });
     
     // Check if the image URL is a data URL (base64 encoded)
     const isDataUrl = product.imageUrl && 
@@ -364,7 +314,7 @@ const AIAssistant = () => {
     
     // Only apply base URL logic for non-data URLs
     if (!isDataUrl && imageUrl) {
-      const baseUrl = 'http://localhost:5000';
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       
       // If the image URL doesn't start with http or /, add the base URL
       if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
@@ -378,7 +328,7 @@ const AIAssistant = () => {
     }
     
     // Placeholder for when there's no valid image
-    const placeholderUrl = '/images/placeholder.png';
+    const placeholderUrl = 'https://placehold.co/300x200/333/FFF?text=Product';
 
     return (
       <div className="inline-product-card">
@@ -471,78 +421,45 @@ const AIAssistant = () => {
     );
   };
 
+  // Helper function to render product cards
   const renderProductCard = (product) => {
-    if (!product || !product.id) {
-      console.error('Invalid product object:', product);
-      return null;
-    }
+    if (!product) return null;
     
-    // Check if the image URL is a data URL (base64 encoded)
-    const isDataUrl = product.imageUrl && 
-                     (product.imageUrl.startsWith('data:image') || 
-                      product.imageUrl.includes('base64'));
-                      
+    // Handle image URL
     let imageUrl = product.imageUrl;
-    
-    // Only apply base URL logic for non-data URLs
-    if (!isDataUrl && imageUrl) {
-      const baseUrl = 'http://localhost:5000';
-      
-      // If the image URL doesn't start with http or /, add the base URL
-      if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
-        imageUrl = '/' + imageUrl;
-      }
-      
-      // For relative URLs that start with /, add the base URL
-      if (imageUrl.startsWith('/')) {
-        imageUrl = baseUrl + imageUrl;
-      }
+    if (!imageUrl) {
+      imageUrl = 'https://placehold.co/300x200/333/FFF?text=Product';
+    } else if (imageUrl.startsWith('data:image')) {
+      // If it's a base64 data URL, use it directly
+      console.log('Using base64 image URL for product:', product.id);
+    } else if (!imageUrl.startsWith('http')) {
+      // If it's a relative path, prepend the base URL
+      const baseUrl = import.meta.env.VITE_BACKEND_URL;
+      imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
     }
-    
-    // Placeholder for when there's no valid image
-    const placeholderUrl = '/images/placeholder.png';
     
     return (
-    <div className="ai-suggested-product" key={product.id}>
-      {imageUrl && (
-        <img 
-          src={imageUrl} 
-          alt={product.name} 
-          className="product-thumbnail"
-          onError={(e) => {
-            console.error('Image failed to load:', imageUrl);
-            e.target.src = placeholderUrl;
-          }}
-        />
-      )}
-      <div className="product-info">
-        <h4 title={product.name}>{product.name}</h4>
-        <p className="product-price">₹{product.price.toLocaleString()}</p>
-        <p className="product-desc">
-          {product.description 
-            ? (product.description.length > 100 
-              ? `${product.description.substring(0, 100)}...` 
-              : product.description)
-            : "No description available"}
-        </p>
-        <div className="product-actions">
-          <button 
-            className="view-details-btn"
-            onClick={() => window.location.href = `/product/${product.id}`}
-          >
-            Details
-          </button>
-          <button 
-            className="add-to-cart-btn"
-            onClick={() => addToCart(product.id)}
-          >
-            Add to Cart
-          </button>
+      <div key={product.id} className="suggested-product-card">
+        <div className="product-image-container">
+          <img 
+            src={imageUrl}
+            alt={product.name}
+            onError={(e) => {
+              console.error('Error loading image for product:', product.id, product.name);
+              e.target.src = 'https://placehold.co/300x200/333/FFF?text=Product';
+            }}
+          />
+        </div>
+        <div className="product-info">
+          <h4 className="product-name">{product.name}</h4>
+          <p className="product-price">₹{product.price.toFixed(2)}</p>
+          <Link to={`/product/${product.id}`} className="view-product-btn">
+            View Product
+          </Link>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   const addToCart = async (productId) => {
     try {
@@ -627,7 +544,11 @@ const AIAssistant = () => {
             if (res.data.products && res.data.products.length > 0) {
               suggestedProducts = res.data.products
                 .filter(product => productIds.includes(product.id))
-                .map(enhanceProductData);
+                .map(product => ({
+                  ...product,
+                  imageUrl: product.imageUrl || product.image || 'https://placehold.co/300x200/333/FFF?text=Product',
+                  price: typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0
+                }));
             }
             
             return {...msg, suggestedProducts};
@@ -644,6 +565,44 @@ const AIAssistant = () => {
     } catch (error) {
       console.error('Failed to load chat:', error);
       setError('Unable to load this chat conversation. It may have been deleted or you do not have permission to access it.');
+    }
+  };
+
+  const processMessage = async (message) => {
+    try {
+      console.log('Processing message:', message);
+      
+      // Extract product IDs from the message text
+      const productIdMatches = message.text.match(/PRODUCT_ID:(\d+)/g) || [];
+      const productIds = productIdMatches.map(match => match.split(':')[1].trim());
+      
+      console.log('Extracted product IDs:', productIds);
+      
+      if (productIds.length > 0) {
+        try {
+          // Deduplicate IDs before sending request
+          const uniqueIds = [...new Set(productIds)];
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/products/suggested?ids=${uniqueIds.join(',')}`);
+          console.log('Product details response:', response.data);
+          
+          if (response.data && Array.isArray(response.data)) {
+            const enhancedProducts = response.data.map(product => enhanceProductData(product));
+            console.log('Enhanced products:', enhancedProducts);
+            return {
+              ...message,
+              suggestedProducts: enhancedProducts
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching product details:', error);
+          // Continue with the original message even if product fetch fails
+        }
+      }
+      
+      return message;
+    } catch (error) {
+      console.error('Error processing message:', error);
+      return message;
     }
   };
 
@@ -723,7 +682,29 @@ const AIAssistant = () => {
                 key={index} 
                 className={`message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}
               >
-                {formatMessage(msg.content, msg.suggestedProducts)}
+                {msg.role === 'assistant' ? (
+                  <div className="message assistant-message">
+                    <div className="message-content">
+                      <div className="message-text">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                      {msg.suggestedProducts && msg.suggestedProducts.length > 0 && (
+                        <div className="suggested-products">
+                          <h4>Recommended Products:</h4>
+                          <div className="products-grid">
+                            {msg.suggestedProducts.map(renderProductCard)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="message user-message">
+                    <div className="message-content">
+                      <div className="message-text">{msg.content}</div>
+                    </div>
+                  </div>
+                )}
                 <div className="message-timestamp">
                   {new Date(msg.timestamp).toLocaleTimeString()}
                 </div>

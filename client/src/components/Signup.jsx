@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import axios from '../axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 import './Auth.css';
+import { toast } from 'react-hot-toast';
 
 const Signup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -22,13 +23,22 @@ const Signup = () => {
     setError('');
     
     try {
+      console.log('Signup attempt:', formData.email);
       const res = await axios.post('/api/auth/signup', formData);
       console.log('Signup successful!');
-      // Show success message and redirect to login page
-      navigate('/login', { state: { message: 'Account created successfully! Please login.' } });
+      
+      // Show success toast
+      toast.success('Account created successfully!');
+      
+      // Redirect to login page with success message
+      navigate('/login', { 
+        state: { message: 'Account created successfully! Please login.' } 
+      });
     } catch (err) {
       console.error('Signup error:', err.response?.data || err.message);
-      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Signup failed. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

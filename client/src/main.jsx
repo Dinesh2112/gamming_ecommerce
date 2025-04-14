@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { UserProvider } from './context/UserContext';
 import { Provider } from 'react-redux';
 import store from './app/store';
+import { Toaster } from 'react-hot-toast';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -13,6 +14,18 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <UserProvider>
           <App />
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#333',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '16px'
+              },
+              duration: 3000
+            }}
+          />
         </UserProvider>
       </BrowserRouter>
     </Provider>

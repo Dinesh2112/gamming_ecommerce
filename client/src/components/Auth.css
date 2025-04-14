@@ -71,18 +71,19 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .input-icon {
-  position: absolute;
-  left: 1rem;
   color: var(--text-muted);
   font-size: 1rem;
+  display: flex;
+  align-items: center;
 }
 
 .form-input {
   width: 100%;
-  padding: 0.9rem 1rem 0.9rem 2.5rem;
+  padding: 0.9rem 1rem;
   background-color: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -201,6 +202,6 @@
   }
   
   .form-input {
-    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    padding: 0.8rem 1rem;
   }
 } 
