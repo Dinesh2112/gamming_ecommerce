@@ -18,7 +18,7 @@ global.prisma = prisma;
 
 // CORS configuration - allow correct frontend port (5173)
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://0048-183-87-197-87.ngrok-free.app'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://gamming-ecommerce.vercel.app'],
   credentials: true
 }));
 
