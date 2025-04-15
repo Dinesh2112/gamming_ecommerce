@@ -155,4 +155,32 @@ router.post('/normalize-roles', async (req, res) => {
   }
 });
 
+// Route to create a new admin user with specific credentials
+router.get('/create-new-admin', async (req, res) => {
+  try {
+    // Create new admin user with specified credentials
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('dinesh123', salt);
+    
+    const user = await prisma.user.create({
+      data: {
+        name: 'Dinesh Rajan',
+        email: 'dineshrajan2112@gmail.com',
+        password: hashedPassword,
+        role: 'ADMIN'  // Make sure this is uppercase
+      }
+    });
+    
+    res.status(201).json({ 
+      message: 'New admin user created successfully', 
+      userId: user.id,
+      email: 'dineshrajan2112@gmail.com'
+    });
+  } catch (error) {
+    console.error('Error creating new admin user:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 

@@ -90,7 +90,7 @@ const login = async (req, res) => {
         id: user.id, 
         name: user.name, 
         email: user.email, 
-        role: user.role.toUpperCase() // Normalize all roles to uppercase
+        role: user.role.toUpperCase() // Ensure role is always uppercase in token
       }, 
       jwtSecret, 
       {

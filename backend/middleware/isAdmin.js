@@ -8,7 +8,8 @@ const isAdmin = (req, res, next) => {
   console.log("User ID:", req.user?.id);
   console.log("User email:", req.user?.email);
   console.log("User role:", req.user?.role);
-  console.log("Role is ADMIN?", req.user?.role === 'ADMIN');
+  console.log("Role uppercase:", req.user?.role?.toUpperCase());
+  console.log("Role is admin (case insensitive)?", req.user?.role?.toUpperCase() === 'ADMIN');
   console.log("Role type:", typeof req.user?.role);
   console.log("JWT content:", JSON.stringify(req.headers['x-auth-token']).substring(0, 30) + '...');
   
@@ -22,8 +23,8 @@ const isAdmin = (req, res, next) => {
     // Log the user role for debugging
     console.log('User role:', req.user.role);
     
-    // Check if user exists and has admin role
-    if (!req.user || req.user.role !== 'ADMIN') {
+    // Check if user exists and has admin role (case insensitive)
+    if (!req.user || req.user.role?.toUpperCase() !== 'ADMIN') {
       console.log('Access denied: Not an admin user');
       return res.status(403).json({ 
         message: 'Access denied. Admin privileges required.' 
