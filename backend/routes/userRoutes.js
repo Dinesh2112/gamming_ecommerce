@@ -69,4 +69,51 @@ router.get('/check-role', verifyToken, (req, res) => {
   }
 });
 
+// Temporary endpoint to create admin user - REMOVE AFTER USE
+router.get('/create-temp-admin', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('dinesh123', salt);
+    
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: 'dineshrajan2112@gmail.com' }
+    });
+    
+    if (existingUser) {
+      // Update the user to be admin
+      await prisma.user.update({
+        where: { email: 'dineshrajan2112@gmail.com' },
+        data: { role: 'ADMIN' }
+      });
+      
+      return res.status(200).json({
+        message: 'Existing user updated to admin',
+        email: 'dineshrajan2112@gmail.com',
+        password: 'dinesh123'
+      });
+    }
+    
+    // Create new admin
+    const user = await prisma.user.create({
+      data: {
+        name: 'Dinesh Rajan',
+        email: 'dineshrajan2112@gmail.com',
+        password: hashedPassword,
+        role: 'ADMIN'
+      }
+    });
+    
+    res.status(201).json({
+      message: 'Admin user created',
+      email: 'dineshrajan2112@gmail.com',
+      password: 'dinesh123'
+    });
+  } catch (error) {
+    console.error('Error creating admin:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
