@@ -264,8 +264,9 @@ const ProductManagement = () => {
       setError(null);
       
       try {
-        // Check if backend server is running first
-        const response = await fetch('/api/products', {
+        // Use the full backend URL from environment variables
+        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${backendUrl}/api/products`, {
           headers: {
             'x-auth-token': localStorage.getItem('token')
           },
@@ -397,9 +398,10 @@ const ProductManagement = () => {
       }
       
       // Real API call
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const url = isEditMode 
-        ? `/api/products/${currentProduct.id}` 
-        : '/api/products';
+        ? `${backendUrl}/api/products/${currentProduct.id}` 
+        : `${backendUrl}/api/products`;
       
       const method = isEditMode ? 'PUT' : 'POST';
       
@@ -491,50 +493,46 @@ const ProductManagement = () => {
       }
       
       // Real API call
-      try {
-        const response = await fetch(`/api/products/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'x-auth-token': localStorage.getItem('token')
-          },
-          // Set a timeout to prevent hanging requests
-          signal: AbortSignal.timeout(5000)
-        });
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${backendUrl}/api/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-auth-token': localStorage.getItem('token')
+        },
+        // Set a timeout to prevent hanging requests
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      // Check content type for proper error handling
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        // We can safely parse JSON
+        const data = await response.json();
         
-        // Check content type for proper error handling
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          // We can safely parse JSON
-          const data = await response.json();
-          
-          if (response.ok) {
-            // Refresh product list
-            fetchProducts();
-          } else {
-            throw new Error(data.message || 'Failed to delete product');
-          }
-        } else if (response.ok) {
-          // If deletion was successful but no JSON response
+        if (response.ok) {
+          // Refresh product list
           fetchProducts();
         } else {
-          // Not JSON response and not OK, API might be unavailable
-          throw new Error('Backend API returned non-JSON error response');
+          throw new Error(data.message || 'Failed to delete product');
         }
-      } catch (error) {
-        console.error('Error with delete API call:', error);
-        setError(`${error.message}. Switching to mock data mode.`);
-        
-        // Switch to mock data mode
-        setApiAvailable(false);
-        
-        // Delete from mock data
-        const filteredProducts = mockProductsState.filter(product => product.id !== id);
-        setMockProductsState(filteredProducts);
-        setProducts(filteredProducts);
+      } else if (response.ok) {
+        // If deletion was successful but no JSON response
+        fetchProducts();
+      } else {
+        // Not JSON response and not OK, API might be unavailable
+        throw new Error('Backend API returned non-JSON error response');
       }
     } catch (error) {
-      setError(`Error: ${error.message}`);
-      console.error('Error in product deletion:', error);
+      console.error('Error with delete API call:', error);
+      setError(`${error.message}. Switching to mock data mode.`);
+      
+      // Switch to mock data mode
+      setApiAvailable(false);
+      
+      // Delete from mock data
+      const filteredProducts = mockProductsState.filter(product => product.id !== id);
+      setMockProductsState(filteredProducts);
+      setProducts(filteredProducts);
     }
   };
 
