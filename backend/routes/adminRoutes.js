@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const verifyToken = require('../middleware/verifyToken');
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
@@ -151,6 +152,50 @@ router.post('/normalize-roles', async (req, res) => {
   } catch (error) {
     console.error('Error normalizing admin roles:', error);
     res.status(500).json({ message: 'Error normalizing admin roles', error: error.message });
+  }
+});
+
+// Route to create Dinesh as admin user
+router.get('/create-dinesh-admin', async (req, res) => {
+  try {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: 'dineshrajan123@gmail.com' }
+    });
+
+    if (existingUser) {
+      // If user exists, update to admin role
+      await prisma.user.update({
+        where: { email: 'dineshrajan123@gmail.com' },
+        data: { role: 'ADMIN' }
+      });
+      return res.status(200).json({ 
+        message: 'User dineshrajan123@gmail.com updated to admin role',
+        userId: existingUser.id
+      });
+    }
+
+    // Create new admin user if doesn't exist
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('dinesh123', salt);
+    
+    const user = await prisma.user.create({
+      data: {
+        name: 'Dinesh Rajan',
+        email: 'dineshrajan123@gmail.com',
+        password: hashedPassword,
+        role: 'ADMIN'
+      }
+    });
+    
+    res.status(201).json({ 
+      message: 'Admin user dineshrajan123@gmail.com created successfully', 
+      userId: user.id 
+    });
+  } catch (error) {
+    console.error('Error creating/updating admin user:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
