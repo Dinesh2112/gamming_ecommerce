@@ -148,7 +148,7 @@ const AIAssistant = () => {
     setIsTyping(true);
     
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       console.log('Using backend URL:', backendUrl);
       
       const response = await axios.post(
@@ -261,7 +261,7 @@ const AIAssistant = () => {
     }
 
     // Base URL for product images
-    const baseUrl = import.meta.env.VITE_BACKEND_URL;
+    const baseUrl = import.meta.env.VITE_API_URL;
     
     // Ensure we have a valid image URL
     let imageUrl = product.imageUrl || product.image;
@@ -314,7 +314,7 @@ const AIAssistant = () => {
     
     // Only apply base URL logic for non-data URLs
     if (!isDataUrl && imageUrl) {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       
       // If the image URL doesn't start with http or /, add the base URL
       if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
@@ -434,7 +434,7 @@ const AIAssistant = () => {
       console.log('Using base64 image URL for product:', product.id);
     } else if (!imageUrl.startsWith('http')) {
       // If it's a relative path, prepend the base URL
-      const baseUrl = import.meta.env.VITE_BACKEND_URL;
+      const baseUrl = import.meta.env.VITE_API_URL;
       imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
     }
     
@@ -582,7 +582,7 @@ const AIAssistant = () => {
         try {
           // Deduplicate IDs before sending request
           const uniqueIds = [...new Set(productIds)];
-          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/products/suggested?ids=${uniqueIds.join(',')}`);
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/suggested?ids=${uniqueIds.join(',')}`);
           console.log('Product details response:', response.data);
           
           if (response.data && Array.isArray(response.data)) {
