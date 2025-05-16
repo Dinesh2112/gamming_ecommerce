@@ -3,8 +3,9 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Import the prisma client with retry logic
-const { prisma } = require("./prismaClient");
+// Import the prisma client with retry logic and setup function
+const { prisma, prismaOperation } = require("./prismaClient");
+const { setupDatabase } = require("./setupDb");
 
 // Initialize Express app
 const app = express();
@@ -26,6 +27,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint that doesn't require database access
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "up", 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Routes
 app.use("/api/auth", require("./routes/userRoutes")); // Add the authentication routes
 
@@ -45,50 +55,22 @@ app.get("/", (req, res) => {
   res.send("API is running... 🚀");
 });
 
-// Temporary admin user creation route (REMOVE AFTER USE)
-app.get("/create-admin", async (req, res) => {
+// Create sample data endpoint
+app.get("/setup-db", async (req, res) => {
   try {
-    const bcrypt = require("bcryptjs");
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash("dinesh123", salt);
-    
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: "dineshrajan2112@gmail.com" }
-    });
-    
-    if (existingUser) {
-      // Update the user to be admin
-      await prisma.user.update({
-        where: { email: "dineshrajan2112@gmail.com" },
-        data: { role: "ADMIN" }
-      });
-      
-      return res.status(200).json({
-        message: "Existing user updated to admin",
-        email: "dineshrajan2112@gmail.com",
-        password: "dinesh123"
-      });
-    }
-    
-    // Create new admin
-    const user = await prisma.user.create({
-      data: {
-        name: "Dinesh Rajan",
-        email: "dineshrajan2112@gmail.com",
-        password: hashedPassword,
-        role: "ADMIN"
-      }
-    });
-    
-    res.status(201).json({
-      message: "Admin user created",
-      email: "dineshrajan2112@gmail.com",
-      password: "dinesh123"
+    console.log("Manual database setup triggered");
+    const result = await setupDatabase();
+    res.status(200).json({
+      success: result,
+      message: "Database setup process completed. Check logs for details."
     });
   } catch (error) {
-    console.error("Error creating admin:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Error in /setup-db endpoint:", error);
+    res.status(500).json({
+      success: false,
+      message: "Database setup failed",
+      error: error.message
+    });
   }
 });
 
@@ -98,7 +80,24 @@ app.use((req, res, next) => {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
 });
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({
+    message: "An unexpected error occurred",
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Attempt to initialize the database but don't block server startup
+  setupDatabase().then(success => {
+    console.log("Database initialization: ", success ? "successful" : "failed");
+  }).catch(error => {
+    console.error("Error during database initialization:", error);
+    console.log("Server will continue running and retry database operations as needed");
+  });
 });
