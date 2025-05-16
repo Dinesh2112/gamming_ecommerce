@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { PrismaClient } = require("@prisma/client");
+const { mockUsers } = require("../mockData");
+const { prismaOperation } = require("../prismaClient");
 
 const prisma = new PrismaClient();
 
@@ -57,19 +59,41 @@ const login = async (req, res) => {
   try {
     console.log(`Login attempt for email: ${email}`);
     
-    // Find the user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    let user;
+    
+    try {
+      // Try to find the user in the database
+      user = await prismaOperation(async () => {
+        return await prisma.user.findUnique({
+          where: { email },
+        });
+      });
+      
+      if (user) {
+        console.log(`User found in database: ${user.name} (ID: ${user.id})`);
+      } else {
+        console.log(`No user found in database with email ${email}, checking mock data`);
+      }
+    } catch (dbError) {
+      console.error(`Database error for login attempt by ${email}:`, dbError.message);
+      user = null;
+    }
+    
+    // If user not found in database or database error, check mock data
     if (!user) {
-      console.log(`Login failed: No user found with email ${email}`);
-      return res.status(400).json({ message: "Invalid credentials" });
+      console.log(`Checking mock users for email: ${email}`);
+      const mockUser = mockUsers.find(u => u.email === email);
+      
+      if (mockUser) {
+        console.log(`Found mock user: ${mockUser.name} (ID: ${mockUser.id})`);
+        user = mockUser;
+      } else {
+        console.log(`No mock user found with email ${email}`);
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
     }
 
-    console.log(`User found: ${user.name} (ID: ${user.id})`);
-    
-    // Compare the entered password with the hashed password in the database
+    // Compare the entered password with the hashed password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -90,7 +114,7 @@ const login = async (req, res) => {
         id: user.id, 
         name: user.name, 
         email: user.email, 
-        role: user.role.toUpperCase() // Ensure role is always uppercase in token
+        role: user.role.toUpperCase() // Normalize all roles to uppercase
       }, 
       jwtSecret, 
       {

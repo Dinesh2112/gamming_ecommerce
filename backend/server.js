@@ -55,6 +55,97 @@ app.get("/", (req, res) => {
   res.send("API is running... 🚀");
 });
 
+// Direct admin user creation endpoint
+app.get("/create-admin", async (req, res) => {
+  try {
+    const bcrypt = require("bcryptjs");
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash("dinesh123", salt);
+    
+    const adminUser = {
+      id: 2,
+      name: "Dinesh Rajan",
+      email: "dineshrajan2112@gmail.com",
+      password: hashedPassword,
+      role: "ADMIN"
+    };
+    
+    // Add to mock users array
+    const { mockUsers } = require("./mockData");
+    
+    // Check if user already exists in mock data
+    const existingUserIndex = mockUsers.findIndex(u => u.email === adminUser.email);
+    if (existingUserIndex >= 0) {
+      // Update existing user
+      mockUsers[existingUserIndex] = adminUser;
+      console.log("Updated existing admin user in mock data");
+    } else {
+      // Add new user
+      mockUsers.push(adminUser);
+      console.log("Added admin user to mock data");
+    }
+    
+    // Try to add to database if available
+    try {
+      const { prisma, prismaOperation } = require("./prismaClient");
+      
+      await prismaOperation(async () => {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: adminUser.email }
+        });
+        
+        if (existingUser) {
+          await prisma.user.update({
+            where: { email: adminUser.email },
+            data: { role: "ADMIN" }
+          });
+          console.log("Updated user to admin in database");
+        } else {
+          await prisma.user.create({
+            data: {
+              name: adminUser.name,
+              email: adminUser.email,
+              password: adminUser.password,
+              role: adminUser.role
+            }
+          });
+          console.log("Created admin user in database");
+        }
+        
+        return true;
+      });
+    } catch (dbError) {
+      console.error("Database operation failed:", dbError.message);
+      console.log("Admin user is available in mock data even though database operation failed");
+    }
+    
+    // Generate JWT token for the user
+    const jwt = require("jsonwebtoken");
+    const jwtSecret = process.env.JWT_SECRET || '8c51647b1f5fb04e8f32efe1b7093d80a86e543fce8f67174c2c8fd0c35f60fe';
+    
+    const token = jwt.sign(
+      { 
+        id: adminUser.id, 
+        name: adminUser.name, 
+        email: adminUser.email, 
+        role: adminUser.role.toUpperCase()
+      }, 
+      jwtSecret, 
+      { expiresIn: "1h" }
+    );
+    
+    res.status(200).json({
+      message: "Admin user created successfully",
+      email: adminUser.email,
+      password: "dinesh123",
+      token
+    });
+  } catch (error) {
+    console.error("Error creating admin:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create sample data endpoint
 app.get("/setup-db", async (req, res) => {
   try {
