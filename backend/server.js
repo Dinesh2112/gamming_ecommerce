@@ -3,22 +3,18 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { PrismaClient } = require("@prisma/client");
+// Import the prisma client with retry logic
+const { prisma } = require("./prismaClient");
 
 // Initialize Express app
 const app = express();
 
-// Initialize a single PrismaClient instance for the whole application
-const prisma = new PrismaClient({
-  log: ['error']
-});
-
 // Make prisma available globally for use in controllers
 global.prisma = prisma;
 
-// CORS configuration - allow correct frontend port (5173)
+// CORS configuration - allow correct frontend port and Vercel domain
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://gamming-ecommerce.vercel.app'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://0048-183-87-197-87.ngrok-free.app', 'https://gamming-ecommerce.vercel.app'],
   credentials: true
 }));
 
