@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/verifyToken");
 const { PrismaClient } = require("@prisma/client");
+const { validateStockAvailability, updateStockOnPurchase } = require("../middleware/stockManagement");
 const crypto = require('crypto');
 
 // Initialize Razorpay
@@ -22,6 +23,56 @@ router.post("/add", verifyToken, async (req, res) => {
   }
 
   try {
+    // First check if product exists and has enough stock
+    const product = await prisma.product.findUnique({
+      where: { id: parseInt(productId) }
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Check if we have enough stock
+    if (product.stock < quantity) {
+      return res.status(400).json({ 
+        message: "Insufficient stock", 
+        availableStock: product.stock 
+      });
+    }
+
+    // Check if item already exists in cart
+    const existingCartItem = await prisma.cartItem.findFirst({
+      where: {
+        userId: req.user.id,
+        productId: parseInt(productId)
+      }
+    });
+
+    if (existingCartItem) {
+      // Update quantity instead of creating new item
+      const newQuantity = existingCartItem.quantity + parseInt(quantity);
+      
+      // Check if total quantity exceeds stock
+      if (newQuantity > product.stock) {
+        return res.status(400).json({ 
+          message: "Insufficient stock for requested quantity", 
+          availableStock: product.stock,
+          currentlyInCart: existingCartItem.quantity
+        });
+      }
+      
+      const updatedItem = await prisma.cartItem.update({
+        where: { id: existingCartItem.id },
+        data: { quantity: newQuantity }
+      });
+      
+      return res.status(200).json({ 
+        message: "Cart item quantity updated", 
+        cartItem: updatedItem 
+      });
+    }
+
+    // Create new cart item
     const cartItem = await prisma.cartItem.create({
       data: {
         userId: req.user.id,
@@ -63,30 +114,74 @@ router.put('/update/:id', verifyToken, async (req, res) => {
   }
 
   try {
-    const updatedItem = await prisma.cartItem.update({
-      where: { id: parseInt(id) },
-      data: { quantity },
+    // Convert id to integer and validate
+    const itemId = parseInt(id);
+    if (isNaN(itemId)) {
+      return res.status(400).json({ message: "Invalid cart item ID" });
+    }
+
+    // Check if the cart item exists before updating
+    const cartItem = await prisma.cartItem.findUnique({
+      where: { id: itemId },
     });
+
+    if (!cartItem) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    // Check if user owns this cart item
+    if (cartItem.userId !== req.user.id) {
+      return res.status(403).json({ message: "You don't have permission to update this cart item" });
+    }
+
+    const updatedItem = await prisma.cartItem.update({
+      where: { id: itemId },
+      data: { quantity },
+      include: { product: true }, // Include product details in the response
+    });
+    
     res.json({ message: "Cart item updated", updatedItem });
   } catch (error) {
+    console.error("Cart update error:", error);
     res.status(500).json({ message: "Error updating cart item", error: error.message });
   }
 });
 
 // ✅ Delete single cart item
 router.delete("/remove/:id", verifyToken, async (req, res) => {
-  const itemId = parseInt(req.params.id);
+  const { id } = req.params;
 
   try {
+    // Convert id to integer and validate
+    const itemId = parseInt(id);
+    if (isNaN(itemId)) {
+      return res.status(400).json({ message: "Invalid cart item ID" });
+    }
+
+    // Check if the cart item exists
+    const cartItem = await prisma.cartItem.findUnique({
+      where: { id: itemId },
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    // Check if user owns this cart item
+    if (cartItem.userId !== req.user.id) {
+      return res.status(403).json({ message: "You don't have permission to remove this cart item" });
+    }
+
     await prisma.cartItem.delete({ where: { id: itemId } });
     res.json({ message: "Item removed from cart" });
   } catch (error) {
+    console.error("Cart removal error:", error);
     res.status(500).json({ message: "Error removing item", error: error.message });
   }
 });
 
 // ✅ Checkout and place order
-router.post("/checkout", verifyToken, async (req, res) => {
+router.post("/checkout", verifyToken, validateStockAvailability, updateStockOnPurchase, async (req, res) => {
   try {
     console.log('Manual checkout request:', req.body);
     
@@ -113,6 +208,35 @@ router.post("/checkout", verifyToken, async (req, res) => {
       console.log('Cart is empty, cannot create order');
       return res.status(400).json({ message: "Cart is empty" });
     }
+    
+    // Double check stock availability
+    const stockCheck = await Promise.all(cartItems.map(async (item) => {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { id: true, name: true, stock: true }
+      });
+      
+      if (!product) {
+        return { valid: false, message: `Product not found: ${item.productId}` };
+      }
+      
+      if (product.stock < item.quantity) {
+        return { 
+          valid: false, 
+          message: `Not enough stock for ${product.name}. Requested: ${item.quantity}, Available: ${product.stock}` 
+        };
+      }
+      
+      return { valid: true };
+    }));
+    
+    const invalidItems = stockCheck.filter(item => !item.valid);
+    if (invalidItems.length > 0) {
+      return res.status(400).json({ 
+        message: "Stock check failed", 
+        errors: invalidItems.map(item => item.message)
+      });
+    }
 
     const totalAmount = cartItems.reduce(
       (sum, item) => sum + item.quantity * item.product.price,
@@ -126,8 +250,8 @@ router.post("/checkout", verifyToken, async (req, res) => {
         userId: req.user.id,
         totalAmount,
         paymentMethod: 'Manual',
-        status: 'CONFIRMED',
         paymentStatus: 'COMPLETED',
+        status: 'CONFIRMED',
         items: {
           create: cartItems.map((item) => ({
             productId: item.productId,
@@ -151,12 +275,24 @@ router.post("/checkout", verifyToken, async (req, res) => {
         shippingAddress: true
       },
     });
-    
+
     console.log('Order created successfully:', order.id);
+
+    // Update product stock
+    await Promise.all(cartItems.map(async (item) => {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          stock: {
+            decrement: item.quantity
+          }
+        }
+      });
+    }));
 
     // Clear the cart after successful order creation
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
-    
+
     console.log('Cart cleared for user:', req.user.id);
 
     res.status(201).json({ 

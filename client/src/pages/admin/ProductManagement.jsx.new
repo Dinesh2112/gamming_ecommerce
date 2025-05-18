@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+﻿import React, { useState, useEffect, useContext } from 'react';
 import { UserContext } from '../../context/UserContext';
 import { Navigate } from 'react-router-dom';
 import './ProductManagement.css';
@@ -151,7 +151,7 @@ const MOCK_PRODUCTS = [
     specifications: {
       material: 'Premium PU Leather',
       maxWeight: '150kg / 330lbs',
-      recline: '90°-165° adjustable',
+      recline: '90Â°-165Â° adjustable',
       armrests: '4D Adjustable',
       heightAdjustment: 'Class 4 Gas Lift',
       lumbarSupport: 'Adjustable lumbar pillow',
@@ -898,7 +898,7 @@ const ProductManagement = () => {
   const DetailTooltip = ({ title, children }) => {
     return (
       <div className="detail-tooltip">
-        <span className="info-icon">ℹ️</span>
+        <span className="info-icon">â„¹ï¸</span>
         <div className="tooltip-content">
           <h4>{title}</h4>
           <div className="tooltip-body">{children}</div>
@@ -919,13 +919,13 @@ const ProductManagement = () => {
         <div class="product-info">
           <h2>${product.name}</h2>
           <div class="product-meta">
-            <span class="price">₹${product.price.toFixed(2)}</span>
+            <span class="price">â‚¹${product.price.toFixed(2)}</span>
             <span class="stock">Stock: ${product.stock}</span>
           </div>
           
           <div class="product-category">
             <span class="label">Category:</span>
-            <span class="value">${typeof product.category === 'object' ? product.category.name : product.category}</span>
+            <span class="value">${product.category}</span>
           </div>
           
           <div class="product-description">
@@ -972,7 +972,7 @@ const ProductManagement = () => {
       <div class="product-details-modal">
         <div class="modal-header">
           <h2>Product Details</h2>
-          <button class="close-modal-btn">×</button>
+          <button class="close-modal-btn">Ã—</button>
         </div>
         <div class="modal-content">
           ${productDetailsHTML}
@@ -1076,47 +1076,27 @@ const ProductManagement = () => {
                         )}
                       </div>
                     </td>
-                    <td>₹{product.price.toFixed(2)}</td>
-                    <td>{typeof product.category === 'object' ? product.category.name : product.category}</td>
+                    <td>â‚¹{product.price.toFixed(2)}</td>
+                    <td>{typeof product.category === "object" ? product.category.name : product.category}</td>
                     <td className={`stock-${getStockClass(product.stock)}`}>{product.stock}</td>
                     <td>
                       <button 
-                        type="button"
                         className="view-details-btn" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("View details clicked for product:", product.id);
-                          handleViewDetails(product);
-                        }}
+                        onClick={() => handleViewDetails(product)}
                       >
                         View
                       </button>
                     </td>
                     <td className="action-buttons">
                       <button 
-                        type="button"
                         className="edit-btn" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Edit button clicked for product ID:", product.id, typeof product.id);
-                          handleEditProduct(product);
-                        }}
+                        onClick={() => handleEditProduct(product)}
                       >
                         Edit
                       </button>
                       <button 
-                        type="button"
                         className="delete-btn" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Delete button clicked for product ID:", product.id, typeof product.id);
-                          // Ensure ID is parsed as integer if it's a string
-                          const productId = typeof product.id === 'string' ? parseInt(product.id) : product.id;
-                          handleDeleteProduct(productId);
-                        }}
+                        onClick={() => handleDeleteProduct(product.id)}
                       >
                         Delete
                       </button>
@@ -1135,7 +1115,7 @@ const ProductManagement = () => {
           <div className="product-modal">
             <div className="modal-header">
               <h2>{isEditMode ? 'Edit Product' : 'Add New Product'}</h2>
-              <button className="close-modal-btn" onClick={handleCloseModal}>×</button>
+              <button className="close-modal-btn" onClick={handleCloseModal}>Ã—</button>
             </div>
             
             <form onSubmit={handleSubmit} className="product-form">
@@ -1153,7 +1133,7 @@ const ProductManagement = () => {
               
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="price">Price (₹)</label>
+                  <label htmlFor="price">Price (â‚¹)</label>
                   <input
                     type="number"
                     id="price"

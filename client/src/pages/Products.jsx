@@ -25,8 +25,17 @@ const Products = () => {
         setProducts(productsData);
         
         // Extract unique categories
-        const uniqueCategories = [...new Set(productsData.map(product => product.category || 'Uncategorized'))];
-        setCategories(['all', ...uniqueCategories]);
+        const categoriesSet = new Set();
+        categoriesSet.add('all');
+        
+        productsData.forEach(product => {
+          const categoryName = typeof product.category === 'object' 
+            ? product.category.name 
+            : (product.category || 'Uncategorized');
+          categoriesSet.add(categoryName);
+        });
+        
+        setCategories(Array.from(categoriesSet));
         
         // Check URL for category parameter
         const params = new URLSearchParams(location.search);
@@ -52,17 +61,21 @@ const Products = () => {
     
     // Apply category filter
     if (selectedCategory !== 'all') {
-      results = results.filter(product => product.category === selectedCategory);
+      results = results.filter(product => {
+        const productCategory = typeof product.category === 'object' ? product.category.name : product.category;
+        return productCategory === selectedCategory;
+      });
     }
     
     // Apply search filter
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      results = results.filter(product => 
-        product.name.toLowerCase().includes(query) ||
-        (product.description && product.description.toLowerCase().includes(query)) ||
-        (product.category && product.category.toLowerCase().includes(query))
-      );
+      results = results.filter(product => {
+        const productCategory = typeof product.category === 'object' ? product.category.name : product.category;
+        return product.name.toLowerCase().includes(query) ||
+          (product.description && product.description.toLowerCase().includes(query)) ||
+          (productCategory && productCategory.toLowerCase().includes(query));
+      });
     }
     
     setFilteredProducts(results);
@@ -137,15 +150,18 @@ const Products = () => {
         </div>
         
         <div className="category-filters">
-          {categories.map(category => (
-            <button
-              key={category}
-              className={`category-filter-btn ${selectedCategory === category ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category === 'all' ? 'All Products' : category}
-            </button>
-          ))}
+          {categories.map((category, index) => {
+            const categoryName = typeof category === 'object' ? category.name : category;
+            return (
+              <button
+                key={`category-${categoryName}-${index}`}
+                className={`category-filter-btn ${selectedCategory === categoryName ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(categoryName)}
+              >
+                {categoryName === 'all' ? 'All Products' : categoryName}
+              </button>
+            );
+          })}
         </div>
       </div>
       
@@ -204,7 +220,9 @@ const Products = () => {
                   )}
                   
                   {product.category && (
-                    <span className="product-category">{product.category}</span>
+                    <span className="product-category">
+                      {typeof product.category === 'object' ? product.category.name : product.category}
+                    </span>
                   )}
                 </div>
                 

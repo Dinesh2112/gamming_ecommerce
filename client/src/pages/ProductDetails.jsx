@@ -69,6 +69,13 @@ const ProductDetails = () => {
       return;
     }
 
+    // Check if quantity exceeds stock
+    if (quantity > product.stock) {
+      alert(`Sorry, only ${product.stock} units available`);
+      setQuantity(product.stock);
+      return;
+    }
+
     try {
       await axios.post('/api/cart/add', { productId, quantity });
       
@@ -88,7 +95,8 @@ const ProductDetails = () => {
         name: product.name,
         price: product.price,
         image: product.imageUrl,
-        quantity
+        quantity,
+        stock: product.stock // Include stock information
       }));
       
       setShowAddedMessage(true);
@@ -194,8 +202,12 @@ const ProductDetails = () => {
           
           <div className="product-details-price-stock">
             <div className="product-details-price">₹{product.price.toFixed(2)}</div>
-            <div className={`product-details-stock ${product.stock > 0 ? 'in-stock' : 'out-of-stock'}`}>
-              {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+            <div className={`product-details-stock ${product.stock > 0 ? (product.stock < 5 ? 'low-stock' : 'in-stock') : 'out-of-stock'}`}>
+              {product.stock > 0 ? 
+                (product.stock < 5 ? 
+                  `Only ${product.stock} left in stock!` : 
+                  'In Stock') : 
+                'Out of Stock'}
             </div>
           </div>
           

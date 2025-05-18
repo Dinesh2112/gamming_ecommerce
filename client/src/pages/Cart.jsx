@@ -5,8 +5,8 @@ import { UserContext } from '../context/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
 import './Cart.css';
 import { toast } from 'react-hot-toast';
-import { useDispatch } from 'react-redux';
-import { clearCart } from '../redux/cartSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearCart, updateCartItemQuantity, clearErrors } from '../features/cart/cartSlice';
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -26,6 +26,9 @@ const Cart = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [orderId, setOrderId] = useState(null);
+  
+  // Get cart errors from Redux
+  const cartErrors = useSelector(state => state.cart.errors || []);
 
   const fetchCart = async () => {
     try {
@@ -33,8 +36,61 @@ const Cart = () => {
       // Use the correct endpoint from the backend routes
       const res = await axios.get('/api/cart/my-cart');
       console.log('Cart data:', res.data);
-      setCartItems(res.data.cartItems || []);
-      setTotal(res.data.total || 0);
+      
+      // Add detailed item logging for debugging
+      if (res.data.cartItems && res.data.cartItems.length > 0) {
+        console.log('First cart item structure:', JSON.stringify(res.data.cartItems[0], null, 2));
+        console.log('Product in cart item:', res.data.cartItems[0].product);
+      }
+      
+      // Update cart items with stock information
+      const itemsWithStock = await Promise.all(
+        (res.data.cartItems || []).map(async (item) => {
+          try {
+            // Fetch current product stock
+            const productRes = await axios.get(`/api/products/${item.productId}`);
+            const currentStock = productRes.data.stock || 0;
+            
+            // If quantity exceeds stock, adjust
+            if (item.quantity > currentStock) {
+              // Update quantity in backend
+              if (currentStock > 0) {
+                await axios.put(`/api/cart/update/${item.id}`, {
+                  quantity: currentStock
+                });
+              }
+              
+              // Show warning
+              toast.error(`Only ${currentStock} units of ${item.product.name} are available`);
+              
+              return {
+                ...item,
+                stock: currentStock
+              };
+            }
+            
+            return {
+              ...item,
+              stock: currentStock
+            };
+          } catch (err) {
+            console.error(`Error fetching stock for product ${item.productId}:`, err);
+            return item;
+          }
+        })
+      );
+      
+      console.log('Cart items with stock:', itemsWithStock);
+      setCartItems(itemsWithStock);
+      
+      // Recalculate total
+      const newTotal = itemsWithStock.reduce(
+        (sum, item) => sum + item.product.price * item.quantity, 
+        0
+      );
+      console.log('Calculated total:', newTotal);
+      setTotal(newTotal);
+      
     } catch (err) {
       console.error('Error fetching cart:', err);
     } finally {
@@ -57,25 +113,113 @@ const Cart = () => {
     }
   }, [user]);
 
+  // Display toast for new cart errors
+  useEffect(() => {
+    if (cartErrors.length > 0) {
+      cartErrors.forEach(error => {
+        toast.error(error.message);
+        // Clear the error after showing it
+        setTimeout(() => {
+          dispatch(clearErrors(error.id));
+        }, 3000);
+      });
+    }
+  }, [cartErrors, dispatch]);
+
   const handleRemoveItem = async (itemId) => {
     try {
+      // Show loading toast
+      const loadingToast = toast.loading("Removing item...");
+      
       await axios.delete(`/api/cart/remove/${itemId}`);
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Success message
+      toast.success("Item removed successfully");
+      
       // Refresh cart after removing item
       fetchCart();
     } catch (err) {
       console.error('Error removing item:', err);
+      
+      // Display appropriate error message based on response status
+      if (err.response) {
+        const statusCode = err.response.status;
+        const errorMessage = err.response.data?.message || "Unknown error";
+        
+        switch (statusCode) {
+          case 400:
+            toast.error(`Invalid request: ${errorMessage}`);
+            break;
+          case 403:
+            toast.error("You don't have permission to remove this item");
+            break;
+          case 404:
+            toast.error("Item not found. Refreshing cart...");
+            fetchCart(); // Refresh cart to remove missing item
+            break;
+          default:
+            toast.error(`Error removing item: ${errorMessage}`);
+        }
+      } else {
+        toast.error("Network error. Please check your connection.");
+      }
     }
   };
 
-  const handleUpdateQuantity = async (itemId, newQuantity) => {
+  const handleUpdateQuantity = async (itemId, newQuantity, stock) => {
     if (newQuantity < 1) return;
     
+    // Check stock limit
+    if (stock !== undefined && newQuantity > stock) {
+      toast.error(`Only ${stock} units available`);
+      newQuantity = stock;
+    }
+    
     try {
-      await axios.put(`/api/cart/update/${itemId}`, { quantity: newQuantity });
+      // Show loading toast
+      const loadingToast = toast.loading("Updating cart...");
+      
+      const response = await axios.put(`/api/cart/update/${itemId}`, { quantity: newQuantity });
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Update in Redux as well
+      dispatch(updateCartItemQuantity({ id: itemId, quantity: newQuantity }));
+      
+      // Success message
+      toast.success("Cart updated successfully");
+      
       // Refresh cart after updating
-    fetchCart();
+      fetchCart();
     } catch (err) {
       console.error('Error updating quantity:', err);
+      
+      // Display appropriate error message based on response status
+      if (err.response) {
+        const statusCode = err.response.status;
+        const errorMessage = err.response.data?.message || "Unknown error";
+        
+        switch (statusCode) {
+          case 400:
+            toast.error(`Invalid request: ${errorMessage}`);
+            break;
+          case 403:
+            toast.error("You don't have permission to update this item");
+            break;
+          case 404:
+            toast.error("Item not found. Refreshing cart...");
+            fetchCart(); // Refresh cart to remove missing item
+            break;
+          default:
+            toast.error(`Error updating cart: ${errorMessage}`);
+        }
+      } else {
+        toast.error("Network error. Please check your connection.");
+      }
     }
   };
 
@@ -327,6 +471,60 @@ const Cart = () => {
     }
   };
 
+  // Modified cart item render to include stock info
+  const renderCartItem = (item) => (
+    <div className="cart-item" key={item.id}>
+      <div className="cart-item-image">
+        <img 
+          src={item.product.imageUrl} 
+          alt={item.product.name} 
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = `https://placehold.co/300x200/333/FFF?text=${encodeURIComponent(item.product.name)}`;
+          }}
+        />
+      </div>
+      <div className="cart-item-details">
+        <h3>
+          <Link to={`/product/${item.productId}`}>{item.product.name}</Link>
+        </h3>
+        <p className="cart-item-price">₹{item.product.price !== undefined ? item.product.price.toFixed(2) : '0.00'}</p>
+        
+        {item.stock <= 0 && (
+          <p className="out-of-stock-warning">This item is out of stock</p>
+        )}
+        
+        {item.stock > 0 && item.stock < 5 && (
+          <p className="low-stock-warning">Only {item.stock} left in stock</p>
+        )}
+        
+        <div className="cart-item-actions">
+          <div className="quantity-selector">
+            <button
+              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1, item.stock)}
+              disabled={item.quantity <= 1}
+            >
+              -
+            </button>
+            <span>{item.quantity}</span>
+            <button
+              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1, item.stock)}
+              disabled={item.stock !== undefined && item.quantity >= item.stock}
+            >
+              +
+            </button>
+          </div>
+          <button className="remove-item" onClick={() => handleRemoveItem(item.id)}>
+            Remove
+          </button>
+        </div>
+        <p className="cart-item-subtotal">
+          Subtotal: ₹{item.product.price !== undefined ? (item.product.price * item.quantity).toFixed(2) : '0.00'}
+        </p>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="cart-loading">
@@ -370,68 +568,7 @@ const Cart = () => {
       ) : (
         <div className="cart-content">
           <div className="cart-items">
-          {cartItems.map((item) => (
-              <div key={item.id} className="cart-item tech-card">
-                <div className="cart-item-image">
-                  {item.product.imageUrl ? (
-                    <img 
-                      src={item.product.imageUrl} 
-                      alt={item.product.name} 
-                      onError={(e) => {
-                        e.target.onerror = null; // Prevent infinite error loop
-                        
-                        // Try Unsplash random image as first fallback
-                        const fallbackUrl = `https://source.unsplash.com/random/300x200/?${item.product.category.toLowerCase()},computer`;
-                        
-                        // If the image is already using the fallback URL or another error occurs
-                        if (e.target.src === fallbackUrl) {
-                          // Use a solid placeholder as final fallback
-                          e.target.src = `https://placehold.co/300x200/333/FFF?text=${encodeURIComponent(item.product.name)}`;
-                        } else {
-                          e.target.src = fallbackUrl;
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="placeholder-image"></div>
-                  )}
-                </div>
-                
-                <div className="cart-item-details">
-                  <h3 className="cart-item-name">{item.product.name}</h3>
-                  <p className="cart-item-price">₹{item.product.price.toFixed(2)}</p>
-                </div>
-                
-                <div className="cart-item-actions">
-                  <div className="quantity-controls">
-                    <button 
-                      className="quantity-btn" 
-                      onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} 
-                      disabled={item.quantity <= 1}
-                    >
-                      -
-                    </button>
-                    <span className="quantity">{item.quantity}</span>
-                    <button 
-                      className="quantity-btn" 
-                      onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                  
-                  <div className="cart-item-subtotal">
-                    <span className="subtotal-label">Subtotal:</span>
-                    <span className="subtotal-value">₹{(item.product.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                  
-                  <button className="remove-btn" onClick={() => handleRemoveItem(item.id)}>
-                    <span className="remove-icon">×</span>
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
+            {cartItems.map((item) => renderCartItem(item))}
           </div>
           
           <div className="cart-summary-container tech-card">
@@ -440,7 +577,7 @@ const Cart = () => {
             <div className="summary-details">
               <div className="summary-row">
                 <span>Items ({cartItems.length}):</span>
-                <span>₹{total.toFixed(2)}</span>
+                <span>₹{total !== undefined ? total.toFixed(2) : '0.00'}</span>
               </div>
               
               <div className="summary-row">
@@ -452,7 +589,7 @@ const Cart = () => {
               
               <div className="summary-row total">
                 <span>Order Total:</span>
-                <span className="total-price">₹{total.toFixed(2)}</span>
+                <span className="total-price">₹{total !== undefined ? total.toFixed(2) : '0.00'}</span>
               </div>
             </div>
             
@@ -567,7 +704,7 @@ const Cart = () => {
               <div className="payment-section">
                 <h3 className="section-title">Payment</h3>
                 <div className="order-total">
-                  Total: <span className="order-amount">₹{total.toFixed(2)}</span>
+                  Total: <span className="order-amount">₹{total !== undefined ? total.toFixed(2) : '0.00'}</span>
                 </div>
                 
                 <div className="razorpay-info">

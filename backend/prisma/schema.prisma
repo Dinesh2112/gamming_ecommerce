@@ -100,6 +100,7 @@ model Product {
   orderItems       OrderItem[]
   compatibleWith   ProductCompatibility[] @relation("PrimaryProduct")
   compatibleTo     ProductCompatibility[] @relation("SecondaryProduct")
+  notifications    Notification[]
 
   // Add a unique constraint on name and brand
   @@unique([name, brand], name: "name_brand")
@@ -228,4 +229,16 @@ model ShippingAddress {
   state     String
   zipCode   String
   createdAt DateTime @default(now())
+}
+
+// Admin notification system
+model Notification {
+  id            Int       @id @default(autoincrement())
+  type          String    // LOW_STOCK, ORDER_PLACED, PAYMENT_FAILED, etc.
+  message       String
+  read          Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  additionalData String?  // JSON string with additional data
+  productId     Int?      // Optional relation to a product
+  product       Product?  @relation(fields: [productId], references: [id])
 }

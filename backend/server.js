@@ -16,6 +16,8 @@ global.prisma = prisma;
 // CORS configuration - allow correct frontend port and Vercel domain
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174', 'https://0048-183-87-197-87.ngrok-free.app', 'https://gamming-ecommerce.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'],
   credentials: true
 }));
 
@@ -46,6 +48,8 @@ app.use("/api/orders", require("./routes/order"));
 
 // Admin routes
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/admin/orders", require("./routes/adminOrderRoutes"));
+app.use("/api/admin/users", require("./routes/adminUserRoutes"));
 
 // AI Assistant routes
 app.use("/api/ai", require("./routes/aiRoutes"));

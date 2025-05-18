@@ -10,8 +10,12 @@ import ProductDetails from './pages/ProductDetails';
 import Signup from './components/Signup';
 import Login from './components/Login';
 import AIAssistant from './pages/AIAssistant';
-import Dashboard from './pages/admin/Dashboard';
-import ProductManagement from './pages/admin/ProductManagement';
+import { 
+  Dashboard, 
+  ProductManagement, 
+  OrderManagement,
+  UserManagement 
+} from './pages/admin';
 import Home from './pages/Home';
 
 const App = () => {
@@ -52,6 +56,8 @@ const App = () => {
           <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/admin/products" element={<ProductManagement />} />
+          <Route path="/admin/orders" element={<OrderManagement />} />
+          <Route path="/admin/users" element={<UserManagement />} />
         </Routes>
       </main>
       <footer className="footer">

@@ -26,12 +26,24 @@ const {
 
 // Admin middleware to check if user is admin
 const isAdmin = (req, res, next) => {
+  console.log('🛡️ Admin check - User role:', req.user?.role);
   if (req.user && req.user.role === 'ADMIN') {
+    console.log('✅ Admin access granted for', req.originalUrl);
     next();
   } else {
+    console.log('❌ Admin access denied for', req.originalUrl);
     res.status(403).json({ message: 'Access denied. Admin role required.' });
   }
 };
+
+// Debug middleware to log all requests
+router.use((req, res, next) => {
+  console.log(`📝 [Product API] ${req.method} ${req.originalUrl}`);
+  if (req.params.id) {
+    console.log(`📝 [Product API] Product ID: ${req.params.id}, type: ${typeof req.params.id}`);
+  }
+  next();
+});
 
 // Get all products - public route
 router.get('/', getProducts);
@@ -115,9 +127,21 @@ router.post('/init', verifyToken, isAdmin, async (req, res) => {
 router.post('/', verifyToken, isAdmin, addProduct);
 
 // Update product
-router.put('/:id', verifyToken, isAdmin, updateProduct);
+router.put('/:id', verifyToken, isAdmin, (req, res, next) => {
+  console.log('⚙️ Update product request received:', req.params.id);
+  console.log('⚙️ Update data:', JSON.stringify(req.body).substring(0, 200) + '...');
+  next();
+}, updateProduct);
 
 // Delete product
-router.delete('/:id', verifyToken, isAdmin, deleteProduct);
+router.delete('/:id', verifyToken, isAdmin, (req, res, next) => {
+  console.log('🗑️ Delete product request received for ID:', req.params.id);
+  // Convert string ID to number if needed
+  if (req.params.id && !isNaN(parseInt(req.params.id))) {
+    req.params.id = parseInt(req.params.id);
+    console.log('🗑️ Converted ID to number:', req.params.id);
+  }
+  next();  
+}, deleteProduct);
 
 module.exports = router;

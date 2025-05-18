@@ -35,13 +35,19 @@ const Home = () => {
   }, []);
 
   const goToCategory = (category) => {
-    navigate(`/products?category=${encodeURIComponent(category)}`);
+    const categoryName = typeof category === 'object' ? category.name : category;
+    navigate(`/products?category=${encodeURIComponent(categoryName)}`);
   };
 
   const getCategoryIcon = (category) => {
+    // Handle both string categories and category objects
     if (!category) return 'gamepad';
     
-    const categoryLower = category.toLowerCase();
+    // If category is an object, use its name property
+    const categoryStr = typeof category === 'object' ? category.name : category;
+    if (typeof categoryStr !== 'string') return 'gamepad';
+    
+    const categoryLower = categoryStr.toLowerCase();
     
     if (categoryLower.includes('graphic') || categoryLower.includes('gpu'))
       return 'microchip';
@@ -90,18 +96,22 @@ const Home = () => {
           <div className="loading">Loading categories...</div>
         ) : (
           <div className="categories-grid">
-            {categories.map((category, index) => (
-              <div 
-                key={index} 
-                className="category-card"
-                onClick={() => goToCategory(category)}
-              >
-                <div className="category-icon">
-                  <i className={`fa fa-${getCategoryIcon(category)}`}></i>
+            {categories.map((category, index) => {
+              // Generate unique ID for each item in render to avoid key conflicts
+              const uniqueId = `category-${index}-${Date.now()}`;
+              return (
+                <div 
+                  key={uniqueId} 
+                  className="category-card"
+                  onClick={() => goToCategory(category)}
+                >
+                  <div className="category-icon">
+                    <i className={`fa fa-${getCategoryIcon(category)}`}></i>
+                  </div>
+                  <h3>{typeof category === 'object' ? category.name : category}</h3>
                 </div>
-                <h3>{category}</h3>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

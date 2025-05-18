@@ -3,6 +3,8 @@ const prisma = new PrismaClient();
 
 // Import the prisma client with retry logic
 const { prismaOperation } = require("../prismaClient");
+// Import mockProducts data for fallback
+const { mockProducts } = require("../mockData");
 
 // Add a new product (Admin only)
 const addProduct = async (req, res) => {
@@ -104,6 +106,15 @@ const getProducts = async (req, res) => {
       }
       
       console.log(`Found ${products.length} products from database`);
+      
+      // Add stock availability information to each product
+      products = products.map(product => ({
+        ...product,
+        inStock: product.stock > 0,
+        stockStatus: product.stock > 10 ? 'In Stock' : 
+                   product.stock > 0 ? `Only ${product.stock} left` : 
+                   'Out of Stock'
+      }));
     } catch (dbError) {
       console.error("Database error in getProducts:", dbError.message);
       console.log("Falling back to mock products");
@@ -154,6 +165,10 @@ const getProductById = async (req, res) => {
       imageUrl: product.imageUrl || 'https://via.placeholder.com/300',
       category: product.category.name,
       stock: product.stock,
+      inStock: product.stock > 0,
+      stockStatus: product.stock > 10 ? 'In Stock' : 
+                 product.stock > 0 ? `Only ${product.stock} left` : 
+                 'Out of Stock',
       specifications: product.additionalSpecs || {},
       features: product.tags.filter(tag => !tag.includes(product.category.name) && !product.idealFor?.includes(tag)) || [],
       compatibleWith: product.compatibleWith || [],
@@ -184,12 +199,16 @@ const updateProduct = async (req, res) => {
       idealFor 
     } = req.body;
 
+    console.log('⏺️ Updating product:', id);
+    console.log('⏺️ Update data:', { name, price, category, stock });
+
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
       where: { id: parseInt(id) }
     });
 
     if (!existingProduct) {
+      console.log('❌ Product not found with ID:', id);
       return res.status(404).json({ message: 'Product not found' });
     }
 
@@ -199,6 +218,7 @@ const updateProduct = async (req, res) => {
     });
 
     if (!categoryObj) {
+      console.log('➕ Creating new category:', category);
       categoryObj = await prisma.category.create({
         data: {
           name: category,
@@ -234,6 +254,8 @@ const updateProduct = async (req, res) => {
       }
     });
 
+    console.log('✅ Product updated successfully:', updatedProduct.id);
+
     // Format the response
     const formattedProduct = {
       id: updatedProduct.id.toString(),
@@ -254,7 +276,7 @@ const updateProduct = async (req, res) => {
       product: formattedProduct 
     });
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error('❌ Error updating product:', error);
     res.status(500).json({ message: 'Error updating product', error: error.message });
   }
 };
@@ -263,6 +285,7 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('⏺️ Deleting product:', id);
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
@@ -270,6 +293,7 @@ const deleteProduct = async (req, res) => {
     });
 
     if (!existingProduct) {
+      console.log('❌ Product not found with ID:', id);
       return res.status(404).json({ message: 'Product not found' });
     }
 
@@ -278,9 +302,10 @@ const deleteProduct = async (req, res) => {
       where: { id: parseInt(id) }
     });
 
+    console.log('✅ Product deleted successfully:', id);
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    console.error('Error deleting product:', error);
+    console.error('❌ Error deleting product:', error);
     res.status(500).json({ message: 'Error deleting product', error: error.message });
   }
 };

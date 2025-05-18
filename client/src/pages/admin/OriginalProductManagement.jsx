@@ -925,7 +925,7 @@ const ProductManagement = () => {
           
           <div class="product-category">
             <span class="label">Category:</span>
-            <span class="value">${typeof product.category === 'object' ? product.category.name : product.category}</span>
+            <span class="value">${product.category}</span>
           </div>
           
           <div class="product-description">
@@ -1077,46 +1077,26 @@ const ProductManagement = () => {
                       </div>
                     </td>
                     <td>₹{product.price.toFixed(2)}</td>
-                    <td>{typeof product.category === 'object' ? product.category.name : product.category}</td>
+                    <td>{typeof product.category === "object" ? product.category.name : product.category}</td>
                     <td className={`stock-${getStockClass(product.stock)}`}>{product.stock}</td>
                     <td>
                       <button 
-                        type="button"
                         className="view-details-btn" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("View details clicked for product:", product.id);
-                          handleViewDetails(product);
-                        }}
+                        onClick={() => handleViewDetails(product)}
                       >
                         View
                       </button>
                     </td>
                     <td className="action-buttons">
                       <button 
-                        type="button"
                         className="edit-btn" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Edit button clicked for product ID:", product.id, typeof product.id);
-                          handleEditProduct(product);
-                        }}
+                        onClick={() => handleEditProduct(product)}
                       >
                         Edit
                       </button>
                       <button 
-                        type="button"
                         className="delete-btn" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Delete button clicked for product ID:", product.id, typeof product.id);
-                          // Ensure ID is parsed as integer if it's a string
-                          const productId = typeof product.id === 'string' ? parseInt(product.id) : product.id;
-                          handleDeleteProduct(productId);
-                        }}
+                        onClick={() => handleDeleteProduct(product.id)}
                       >
                         Delete
                       </button>
