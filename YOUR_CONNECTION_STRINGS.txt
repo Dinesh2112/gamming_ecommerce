@@ -1,0 +1,42 @@
+========================================
+YOUR SUPABASE CONNECTION STRINGS
+========================================
+
+Password: Dinesh@022112
+(Note: @ is URL-encoded as %40 in connection strings)
+
+----------------------------------------
+1. DIRECT CONNECTION (For Migrations)
+----------------------------------------
+Use this in backend/.env file for running migrations locally
+
+postgresql://postgres:Dinesh%40022112@db.cwthpewwogyukuckoytc.supabase.co:5432/postgres
+
+✅ Already added to backend/.env file
+
+----------------------------------------
+2. POOLED CONNECTION (For Vercel)
+----------------------------------------
+You need to get this from Supabase Dashboard:
+Settings → Database → Connection Pooling tab
+
+Once you get it, it should look like:
+postgresql://postgres.cwthpewwogyukuckoytc:Dinesh%40022112@db.cwthpewwogyukuckoytc.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1
+
+⚠️ Important: 
+- Use port 6543 (not 5432)
+- Add ?pgbouncer=true&connection_limit=1 at the end
+- Use this in Vercel environment variables
+
+----------------------------------------
+NEXT STEPS:
+----------------------------------------
+1. ✅ .env file created with direct connection
+2. ⏳ Test connection: cd backend && node setup-supabase.js
+3. ⏳ Run migrations: cd backend && npx prisma migrate deploy
+4. ⏳ Get pooled connection from Supabase dashboard
+5. ⏳ Add pooled connection to Vercel as DATABASE_URL
+6. ⏳ Redeploy on Vercel
+
+========================================
+

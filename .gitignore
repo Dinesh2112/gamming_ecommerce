@@ -10,6 +10,9 @@
 .env.development.local
 .env.test.local
 .env.production.local
+.env.backup
+.env.backup-*
+*.backup
 
 # testing
 /coverage
@@ -47,4 +50,8 @@ logs
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+
+# Backup files
+*.backup
+.env.backup*

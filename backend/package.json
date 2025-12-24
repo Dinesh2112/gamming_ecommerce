@@ -8,7 +8,9 @@
     "dev": "nodemon server.js",
     "migrate": "npx prisma migrate deploy",
     "db:push": "npx prisma db push",
-    "seed": "node setupTestData.js"
+    "seed": "node setupTestData.js",
+    "setup-supabase": "node setup-supabase.js",
+    "test-db": "node testConnection.js"
   },
   "keywords": [],
   "author": "",
