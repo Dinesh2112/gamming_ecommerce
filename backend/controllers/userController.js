@@ -1,10 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { PrismaClient } = require("@prisma/client");
+const { prisma, prismaOperation } = require("../prismaClient");
 const { mockUsers } = require("../mockData");
-const { prismaOperation } = require("../prismaClient");
-
-const prisma = new PrismaClient();
 
 // Function for signing up a new user
 const signup = async (req, res) => {
@@ -17,10 +14,12 @@ const signup = async (req, res) => {
 
   try {
     // Check if the user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+    const existingUser = await prismaOperation(async () => {
+      return await prisma.user.findUnique({
+        where: {
+          email,
+        },
+      });
     });
 
     if (existingUser) {
@@ -31,13 +30,15 @@ const signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create the user in the database
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role || "user", // Default role is user
-      },
+    const user = await prismaOperation(async () => {
+      return await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: role || "user", // Default role is user
+        },
+      });
     });
 
     res.status(201).json({ message: "User created successfully", user });
