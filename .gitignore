@@ -14,6 +14,39 @@
 .env.backup-*
 *.backup
 
+# sensitive data
+YOUR_CONNECTION_STRINGS.txt
+GEMINI_KEY_ADDED.md
+VERCEL_ENV_REVIEW.md
+
+# temporary guides and checklists
+FINAL_CHECKLIST.md
+GIT_AND_VERCEL.md
+PREPARE_TO_PUSH.md
+QUICK_PUSH_GUIDE.md
+QUICK_START_SUPABASE.md
+SETUP_COMPLETE.md
+SETUP_INSTRUCTIONS.md
+SUPABASE_SETUP_GUIDE.md
+WHAT_I_DID.md
+WHAT_NEXT.md
+
+# backend guides and scripts
+backend/*.md
+backend/*.ps1
+backend/seeder.js
+backend/resetAdmin.js
+backend/checkProducts.js
+backend/checkDatabase.js
+backend/test*.js
+backend/create*.js
+backend/generate*.js
+backend/update*.js
+backend/verify-env.js
+backend/setup*.js
+backend/prismaClient.js.bak
+backend/server.js.new
+
 # testing
 /coverage
 

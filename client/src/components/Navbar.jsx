@@ -1,121 +1,102 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
+import { LucideShield, LucideShoppingCart, LucideCpu, LucideMenu, LucideX, LucideUser, LucideLogOut, LucideClipboardList, LucideLayoutDashboard } from 'lucide-react';
+import './Navbar.css';
 
 const Navbar = () => {
   const { user, logout } = useContext(UserContext);
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
   
   const isActive = (path) => location.pathname === path;
 
-  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     }
-    
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
-
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        <Link to="/" className="navbar-logo">
-          <span className="tech-logo">TECH</span>
-          <span className="gear-logo">GEAR</span>
+    <nav className={`tactical-nav ${scrolled ? 'scrolled' : ''}`}>
+      <div className="nav-container container">
+        <Link to="/" className="nav-logo">
+          <div className="logo-hex">
+            <LucideShield className="hex-icon" size={24} />
+          </div>
+          <span className="logo-text">HYPER<span className="glow">DRIVE</span></span>
         </Link>
         
-        <div className={`navbar-menu ${menuOpen ? 'active' : ''}`}>
-          <Link to="/" className={`navbar-link ${isActive('/') ? 'active' : ''}`}>
-            <span className="navbar-icon">⌂</span>
-            <span>Home</span>
+        <div className={`nav-links ${menuOpen ? 'active' : ''}`}>
+          <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+            CENTRAL HUB
           </Link>
-          
-          <Link to="/products" className={`navbar-link ${isActive('/products') ? 'active' : ''}`}>
-            <span className="navbar-icon">⚙</span>
-            <span>Products</span>
+          <Link to="/products" className={`nav-link ${isActive('/products') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+            ARMORY
           </Link>
-          
-          <Link to="/cart" className={`navbar-link ${isActive('/cart') ? 'active' : ''}`}>
-            <span className="navbar-icon">🛒</span>
-            <span>Cart</span>
-          </Link>
-          
-          <Link to="/orders" className={`navbar-link ${isActive('/orders') ? 'active' : ''}`}>
-            <span className="navbar-icon">📦</span>
-            <span>Orders</span>
-          </Link>
-          
-          <Link to="/ai-assistant" className={`navbar-link ai-link ${isActive('/ai-assistant') ? 'active' : ''}`}>
-            <span className="navbar-icon">🤖</span>
-            <span>AI Assistant</span>
+          <Link to="/ai-assistant" className={`nav-link ai-link ${isActive('/ai-assistant') ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+            <LucideCpu size={16} /> AI CORE
           </Link>
         </div>
         
-        <div className="navbar-auth">
+        <div className="nav-actions">
+          <Link to="/cart" className="action-icon cart-trigger">
+            <LucideShoppingCart size={22} />
+          </Link>
+          
           {user ? (
-            <div className="user-info" ref={dropdownRef}>
-              <span className="user-greeting">
-                Hello, <span className="user-name" onClick={toggleDropdown} style={{ cursor: 'pointer' }}>
-                  {user.name} {dropdownOpen ? '▲' : '▼'}
-                </span>
-                {user.role === 'ADMIN' && <span className="admin-badge">ADMIN</span>}
-              </span>
+            <div className="user-terminal" ref={dropdownRef}>
+              <div className="pilot-trigger" onClick={() => setDropdownOpen(!dropdownOpen)}>
+                <div className="pilot-avatar">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="pilot-name">{user.name.split(' ')[0]}</span>
+              </div>
               
               {dropdownOpen && (
-                <div className="user-dropdown">
+                <div className="pilot-dropdown glass">
+                  <div className="dropdown-header">PILOT ACCESS</div>
                   {user.role === 'ADMIN' && (
-                    <Link to="/admin/dashboard" className="dropdown-item">
-                      Dashboard
+                    <Link to="/admin/dashboard" className="drop-link" onClick={() => setDropdownOpen(false)}>
+                      <LucideLayoutDashboard size={16} /> COMMAND CENTER
                     </Link>
                   )}
-                  <button 
-                    onClick={logout} 
-                    className="dropdown-item logout-item"
-                  >
-                    Logout
+                  <Link to="/orders" className="drop-link" onClick={() => setDropdownOpen(false)}>
+                    <LucideClipboardList size={16} /> MISSION LOG
+                  </Link>
+                  <div className="drop-divider"></div>
+                  <button onClick={logout} className="drop-link logout">
+                    <LucideLogOut size={16} /> DISCONNECT
                   </button>
                 </div>
               )}
-              
-              {/* Keep the logout button visible even when dropdown is closed */}
-              {!dropdownOpen && (
-                <button 
-                  onClick={logout} 
-                  className="logout-btn"
-                >
-                  Logout
-                </button>
-              )}
             </div>
           ) : (
-            <div className="auth-buttons">
-              <Link to="/signup" className="signup-btn">Sign Up</Link>
-              <Link to="/login" className="login-btn">Login</Link>
+            <div className="nav-auth">
+              <Link to="/login" className="login-trigger">SIGN IN</Link>
+              <Link to="/signup" className="neon-btn signup-trigger">JOIN</Link>
             </div>
           )}
+          
+          <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <LucideX /> : <LucideMenu />}
+          </button>
         </div>
-        
-        <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-          <div className={`hamburger ${menuOpen ? 'active' : ''}`}>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </button>
       </div>
+      <div className="nav-scan-line"></div>
     </nav>
   );
 };

@@ -15,172 +15,141 @@ const Home = () => {
         setLoading(true);
         const response = await axios.get('/api/products');
         const products = response.data;
-        
-        // Get random featured products
         const shuffled = [...products].sort(() => 0.5 - Math.random());
-        setFeaturedProducts(shuffled.slice(0, 6));
-        
-        // Extract unique categories
-        const uniqueCategories = [...new Set(products.map(product => product.category))];
-        setCategories(uniqueCategories.filter(Boolean).slice(0, 6));
-        
+        setFeaturedProducts(shuffled.slice(0, 4));
+        const uniqueCategories = [...new Set(products.map(product => {
+          if (typeof product.category === 'object' && product.category !== null) {
+            return product.category.name;
+          }
+          return product.category;
+        }))];
+        setCategories(uniqueCategories.filter(Boolean).slice(0, 4));
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
         setLoading(false);
       }
     };
-    
     fetchData();
   }, []);
 
   const goToCategory = (category) => {
-    const categoryName = typeof category === 'object' ? category.name : category;
-    navigate(`/products?category=${encodeURIComponent(categoryName)}`);
-  };
-
-  const getCategoryIcon = (category) => {
-    // Handle both string categories and category objects
-    if (!category) return 'gamepad';
-    
-    // If category is an object, use its name property
-    const categoryStr = typeof category === 'object' ? category.name : category;
-    if (typeof categoryStr !== 'string') return 'gamepad';
-    
-    const categoryLower = categoryStr.toLowerCase();
-    
-    if (categoryLower.includes('graphic') || categoryLower.includes('gpu'))
-      return 'microchip';
-    if (categoryLower.includes('processor') || categoryLower.includes('cpu'))
-      return 'microchip';
-    if (categoryLower.includes('monitor') || categoryLower.includes('display'))
-      return 'desktop';
-    if (categoryLower.includes('keyboard'))
-      return 'keyboard';
-    if (categoryLower.includes('chair'))
-      return 'chair';
-    if (categoryLower.includes('laptop'))
-      return 'laptop';
-    if (categoryLower.includes('mouse'))
-      return 'mouse';
-    if (categoryLower.includes('headset') || categoryLower.includes('audio'))
-      return 'headphones';
-    if (categoryLower.includes('storage') || categoryLower.includes('ssd') || categoryLower.includes('hdd'))
-      return 'hdd';
-    
-    return 'gamepad';
+    navigate(`/products?category=${encodeURIComponent(category)}`);
   };
 
   return (
-    <div className="home-container">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1>Build Your Ultimate Gaming Setup</h1>
-          <p>Discover premium components and accessories to elevate your gaming experience to the next level</p>
-          <div className="hero-buttons">
-            <Link to="/products" className="btn btn-primary">Browse Products</Link>
-            <Link to="/ai-assistant" className="btn btn-secondary">AI Assistant</Link>
+    <div className="home-wrapper">
+      {/* Hero Section: The Bridge */}
+      <section className="hero">
+        <div className="hero-video-box">
+          <div className="hero-overlay"></div>
+          <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop" alt="Hero" className="hero-bg" />
+        </div>
+        
+        <div className="container hero-container">
+          <div className="hero-content">
+            <div className="status-badge">
+              <span className="pulse"></span> ONLINE: NEXT-GEN HARDWARE
+            </div>
+            <h1 className="hero-title">
+              EQUIP YOUR <span className="highlight">LEGACY</span>
+            </h1>
+            <p className="hero-subtitle">
+              High-performance components for elite builders. Level up your productivity and dominance in the digital realm.
+            </p>
+            <div className="hero-btns">
+              <button onClick={() => navigate('/products')} className="neon-btn">Enter Armory</button>
+              <button onClick={() => navigate('/ai-assistant')} className="btn-secondary">Consult AI</button>
+            </div>
+          </div>
+          
+          <div className="hero-visual">
+             <div className="floating-card glass">
+               <div className="card-glint"></div>
+               <div className="card-specs">
+                 <div className="spec-item"><span>FPS</span><span className="val">240+</span></div>
+                 <div className="spec-item"><span>TEMP</span><span className="val"> cooled</span></div>
+               </div>
+             </div>
           </div>
         </div>
       </section>
 
-      {/* Categories Section */}
-      <section className="categories-section">
-        <div className="section-header">
-          <h2>Shop by Category</h2>
-          <Link to="/products" className="view-all">View All Products</Link>
-        </div>
-        
-        {loading ? (
-          <div className="loading">Loading categories...</div>
-        ) : (
-          <div className="categories-grid">
-            {categories.map((category, index) => {
-              // Generate unique ID for each item in render to avoid key conflicts
-              const uniqueId = `category-${index}-${Date.now()}`;
-              return (
-                <div 
-                  key={uniqueId} 
-                  className="category-card"
-                  onClick={() => goToCategory(category)}
-                >
-                  <div className="category-icon">
-                    <i className={`fa fa-${getCategoryIcon(category)}`}></i>
-                  </div>
-                  <h3>{typeof category === 'object' ? category.name : category}</h3>
+      {/* Categories: Tactical Selection */}
+      <section className="categories">
+        <div className="container">
+          <div className="section-head">
+            <h2 className="section-title">Tactical Selection</h2>
+            <p className="section-desc">Filter by component class</p>
+          </div>
+          
+          <div className="cats-grid">
+            {categories.map((cat, i) => (
+              <div key={i} className="cat-card glass" onClick={() => goToCategory(cat)}>
+                <div className="cat-icon-box">
+                  <span className="cat-tag">LVL {i + 1}</span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Featured Products Section */}
-      <section className="featured-products-section">
-        <div className="section-header">
-          <h2>Featured Products</h2>
-          <Link to="/products" className="view-all">Browse All</Link>
-        </div>
-        
-        {loading ? (
-          <div className="loading">Loading products...</div>
-        ) : (
-          <div className="products-grid">
-            {featuredProducts.map((product) => (
-              <div key={product.id} className="product-card">
-                <Link to={`/product/${product.id}`}>
-                  <div className="product-image">
-                    <img 
-                      src={product.imageUrl || 'https://placehold.co/300x200/333/FFF?text=Product'} 
-                      alt={product.name}
-                      onError={(e) => {
-                        e.target.src = 'https://placehold.co/300x200/333/FFF?text=Product';
-                      }}
-                    />
-                  </div>
-                  <div className="product-info">
-                    <h3>{product.name}</h3>
-                    <p className="price">₹{product.price.toFixed(2)}</p>
-                  </div>
-                </Link>
+                <h3 className="cat-name">{cat}</h3>
+                <div className="cat-arrow">→</div>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </section>
 
-      {/* Why Choose Us Section */}
-      <section className="why-choose-us">
-        <h2>Why Choose TechGear</h2>
-        <div className="features-grid">
-          <div className="feature">
-            <div className="feature-icon">
-              <i className="fa fa-truck"></i>
-            </div>
-            <h3>Fast Shipping</h3>
-            <p>Free shipping on orders over ₹5000 with quick delivery across India</p>
+      {/* Featured: Elite Gear */}
+      <section className="featured">
+        <div className="container">
+          <div className="section-head center">
+            <h2 className="section-title">Elite Gear</h2>
+            <p className="section-desc">Top performers in the field</p>
           </div>
-          <div className="feature">
-            <div className="feature-icon">
-              <i className="fa fa-shield"></i>
+          
+          {loading ? (
+            <div className="loader-box"><div className="loader"></div></div>
+          ) : (
+            <div className="feats-grid">
+              {featuredProducts.map((p) => (
+                <div key={p.id} className="feat-card glass-card" onClick={() => navigate(`/product/${p.id}`)}>
+                  <div className="feat-img">
+                    <img src={p.imageUrl} alt={p.name} />
+                    <div className="feat-price">₹{p.price.toLocaleString()}</div>
+                  </div>
+                  <div className="feat-info">
+                    <span className="feat-brand">{p.brand}</span>
+                    <h3 className="feat-name">{p.name}</h3>
+                    <div className="feat-action">View Specs</div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <h3>Quality Guarantee</h3>
-            <p>All products come with manufacturer warranty and quality assurance</p>
+          )}
+          
+          <div className="center mt-4">
+             <button onClick={() => navigate('/products')} className="btn-link">View Full Inventory →</button>
           </div>
-          <div className="feature">
-            <div className="feature-icon">
-              <i className="fa fa-headset"></i>
-            </div>
-            <h3>24/7 Support</h3>
-            <p>Our gaming experts are available round the clock to assist you</p>
-          </div>
-          <div className="feature">
-            <div className="feature-icon">
-              <i className="fa fa-rotate-left"></i>
-            </div>
-            <h3>Easy Returns</h3>
-            <p>Hassle-free 30-day return policy on most products</p>
+        </div>
+      </section>
+
+      {/* Systems: Why Us */}
+      <section className="systems">
+        <div className="container">
+          <div className="systems-grid">
+             <div className="sys-item">
+                <div className="sys-icon">🚚</div>
+                <h4>Warp Speed Delivery</h4>
+                <p>Global logistics for urgent builds.</p>
+             </div>
+             <div className="sys-item">
+                <div className="sys-icon">🛡️</div>
+                <h4>Titan Guard Warranty</h4>
+                <p>3-year secure protection on all gear.</p>
+             </div>
+             <div className="sys-item">
+                <div className="sys-icon">⚡</div>
+                <h4>AI Support</h4>
+                <p>24/7 automated technical assistance.</p>
+             </div>
           </div>
         </div>
       </section>
@@ -188,4 +157,5 @@ const Home = () => {
   );
 };
 
-export default Home; 
+export default Home;
+ 

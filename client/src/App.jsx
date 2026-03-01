@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import './App.css';
 import './components/Navbar.css';
@@ -60,13 +60,31 @@ const App = () => {
           <Route path="/admin/users" element={<UserManagement />} />
         </Routes>
       </main>
-      <footer className="footer">
-        <div className="container">
-          <p className="copyright">&copy; {new Date().getFullYear()} TechGear - All rights reserved</p>
-          <div className="footer-links">
-            <a href="#" className="footer-link">Privacy Policy</a>
-            <a href="#" className="footer-link">Terms of Service</a>
-            <a href="#" className="footer-link">Contact Us</a>
+      <footer className="footer-terminal">
+        <div className="container footer-grid">
+          <div className="footer-brand">
+            <h3 className="glitch-title" data-text="HYPERDRIVE">HYPERDRIVE</h3>
+            <p>ELITE LOGISTICS & HARDWARE DEPLOYMENT</p>
+          </div>
+          <div className="footer-nav">
+            <div className="nav-col">
+              <h5>SECTORS</h5>
+              <Link to="/products?category=Monitors">VISUALS</Link>
+              <Link to="/products?category=Keyboards">PERIPHERALS</Link>
+              <Link to="/products?category=Mouse">OPTICS</Link>
+            </div>
+            <div className="nav-col">
+              <h5>PROTOCOLS</h5>
+              <Link to="#">PRIVACY</Link>
+              <Link to="#">TERMS</Link>
+              <Link to="#">SUPPORT</Link>
+            </div>
+          </div>
+          <div className="footer-auth">
+            <p className="copyright">&copy; {new Date().getFullYear()} HYPERDRIVE SYSTEMS. ALL RIGHTS RESERVED.</p>
+            <div className="status-line">
+              <span className="dot"></span> SYSTEM NOMINAL
+            </div>
           </div>
         </div>
       </footer>

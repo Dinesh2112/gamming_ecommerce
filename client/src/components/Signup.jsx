@@ -1,134 +1,84 @@
-// src/components/Signup.jsx
 import React, { useState } from 'react';
 import axios from '../axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 import './Auth.css';
 import { toast } from 'react-hot-toast';
+import { LucideUser, LucideMail, LucideLock, LucideUserPlus } from 'lucide-react';
 
 const Signup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Clear error when user types
-    if (error) setError('');
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    
     try {
-      console.log('Signup attempt:', formData.email);
-      const res = await axios.post('/api/auth/signup', formData);
-      console.log('Signup successful!');
-      
-      // Show success toast
-      toast.success('Account created successfully!');
-      
-      // Redirect to login page with success message
-      navigate('/login', { 
-        state: { message: 'Account created successfully! Please login.' } 
-      });
+      await axios.post('/api/auth/signup', formData);
+      toast.success('ASSET REGISTERED');
+      navigate('/login');
     } catch (err) {
-      console.error('Signup error:', err.response?.data || err.message);
-      const errorMessage = err.response?.data?.message || 'Signup failed. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+      toast.error(err.response?.data?.message || 'REGISTRATION REJECTED');
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
+    <div className="auth-wrapper">
+      <div className="auth-card glass-card">
         <div className="auth-header">
-          <h2 className="auth-title">Create Account</h2>
-          <div className="auth-subtitle">Join TechGear community</div>
+          <LucideUserPlus className="auth-icon-main" size={40} />
+          <h2 className="glitch-title" data-text="REGISTRATION">REGISTRATION</h2>
+          <p className="auth-hint">Initialize New Asset Protocol</p>
         </div>
-        
-        {error && (
-          <div className="auth-error">
-            <div className="error-icon">!</div>
-            <div className="error-message">{error}</div>
-          </div>
-        )}
-        
+
         <form onSubmit={handleSignup} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="name" className="form-label">Name</label>
-            <div className="input-container">
-              <span className="input-icon">👤</span>
-              <input 
-                type="text" 
-                id="name"
-                name="name" 
-                value={formData.name}
-                placeholder="Enter your full name" 
-                onChange={handleChange} 
-                required 
-                className="form-input"
-              />
-            </div>
+          <div className="input-field glass">
+            <LucideUser size={18} />
+            <input 
+              type="text" 
+              name="name" 
+              placeholder="PILOT DESIGNATION" 
+              value={formData.name}
+              onChange={handleChange} 
+              required 
+            />
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="email" className="form-label">Email</label>
-            <div className="input-container">
-              <span className="input-icon">✉</span>
-              <input 
-                type="email" 
-                id="email"
-                name="email" 
-                value={formData.email}
-                placeholder="Enter your email" 
-                onChange={handleChange} 
-                required 
-                className="form-input"
-              />
-            </div>
+
+          <div className="input-field glass">
+            <LucideMail size={18} />
+            <input 
+              type="email" 
+              name="email" 
+              placeholder="PILOT EMAIL" 
+              value={formData.email}
+              onChange={handleChange} 
+              required 
+            />
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">Password</label>
-            <div className="input-container">
-              <span className="input-icon">🔒</span>
-              <input 
-                type="password" 
-                id="password"
-                name="password" 
-                value={formData.password}
-                placeholder="Create a strong password" 
-                onChange={handleChange} 
-                required 
-                minLength="6"
-                className="form-input"
-              />
-            </div>
-            <small className="form-hint">Password must be at least 6 characters</small>
+
+          <div className="input-field glass">
+            <LucideLock size={18} />
+            <input 
+              type="password" 
+              name="password" 
+              placeholder="ENCRYPTION KEY" 
+              value={formData.password}
+              onChange={handleChange} 
+              required 
+              minLength="6"
+            />
           </div>
-          
-          <button 
-            type="submit" 
-            disabled={loading}
-            className={`auth-button ${loading ? 'loading' : ''}`}
-          >
-            {loading ? (
-              <>
-                <span className="spinner"></span>
-                <span>Creating account...</span>
-              </>
-            ) : 'Sign Up'}
+
+          <button type="submit" disabled={loading} className="neon-btn auth-submit">
+            {loading ? 'INITIALIZING...' : 'AUTHORIZE REGISTRATION'}
           </button>
         </form>
-        
+
         <div className="auth-footer">
-          <p>Already have an account? <Link to="/login" className="auth-link">Login</Link></p>
+          <span>LINK ALREADY ESTABLISHED?</span>
+          <Link to="/login" className="auth-link">ACCESS TERMINAL</Link>
         </div>
       </div>
     </div>

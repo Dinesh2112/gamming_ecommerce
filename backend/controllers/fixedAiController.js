@@ -15,7 +15,7 @@ try {
 }
 
 // The model to use - we've verified this one works!
-const MODEL_NAME = "gemini-1.5-pro";
+const MODEL_NAME = "gemini-2.5-flash";
 
 // Initialize a chat session or retrieve an existing one
 const initializeChat = async (req, res) => {
