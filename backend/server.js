@@ -196,3 +196,5 @@ app.listen(PORT, () => {
     console.log("Server will continue running and retry database operations as needed");
   });
 });
+
+module.exports = app;
